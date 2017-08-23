@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.apache.freemarker.core.Environment;
+import org.apache.freemarker.core.TemplateException;
 import org.apache.freemarker.core.model.AdapterTemplateModel;
 import org.apache.freemarker.core.model.ObjectWrapper;
 import org.apache.freemarker.core.model.TemplateBooleanModel;
@@ -30,10 +31,9 @@ import org.apache.freemarker.core.model.TemplateCollectionModel;
 import org.apache.freemarker.core.model.TemplateDateModel;
 import org.apache.freemarker.core.model.TemplateHashModelEx;
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateModelException;
 import org.apache.freemarker.core.model.TemplateModelIterator;
 import org.apache.freemarker.core.model.TemplateNumberModel;
-import org.apache.freemarker.core.model.TemplateScalarModel;
+import org.apache.freemarker.core.model.TemplateStringModel;
 import org.apache.freemarker.core.model.TemplateSequenceModel;
 import org.apache.freemarker.core.model.WrapperTemplateModel;
 
@@ -52,8 +52,8 @@ public class DeepUnwrap {
      *       of {@link WrapperTemplateModel#getWrappedObject()} is returned.
      *   <li>If the object is identical to the null model of the current object 
      *       wrapper, null is returned. 
-     *   <li>If the object implements {@link TemplateScalarModel}, then the result
-     *       of {@link TemplateScalarModel#getAsString()} is returned.
+     *   <li>If the object implements {@link TemplateStringModel}, then the result
+     *       of {@link TemplateStringModel#getAsString()} is returned.
      *   <li>If the object implements {@link TemplateNumberModel}, then the result
      *       of {@link TemplateNumberModel#getAsNumber()} is returned.
      *   <li>If the object implements {@link TemplateDateModel}, then the result
@@ -67,11 +67,11 @@ public class DeepUnwrap {
      *   <li>If the object implements {@link TemplateHashModelEx}, then a
      *       <code>java.util.HashMap</code> is constructed from the subvariables, and each
      *       subvariable is unwrapped with the rules described here (recursive unwrapping).
-     *   <li>Throw a <code>TemplateModelException</code>, because it doesn't know how to
+     *   <li>Throw a {@link TemplateException}, because it doesn't know how to
      *       unwrap the object.
      * </ol>
      */
-    public static Object unwrap(TemplateModel model) throws TemplateModelException {
+    public static Object unwrap(TemplateModel model) throws TemplateException {
         return unwrap(model, false);
     }
 
@@ -79,11 +79,11 @@ public class DeepUnwrap {
      * Same as {@link #unwrap(TemplateModel)}, but it doesn't throw exception 
      * if it doesn't know how to unwrap the model, but rather returns it as-is.
      */
-    public static Object permissiveUnwrap(TemplateModel model) throws TemplateModelException {
+    public static Object permissiveUnwrap(TemplateModel model) throws TemplateException {
         return unwrap(model, true);
     }
     
-    private static Object unwrap(TemplateModel model, boolean permissive) throws TemplateModelException {
+    private static Object unwrap(TemplateModel model, boolean permissive) throws TemplateException {
         Environment env = Environment.getCurrentEnvironment();
         TemplateModel nullModel = null;
         if (env != null) {
@@ -95,7 +95,7 @@ public class DeepUnwrap {
         return unwrap(model, nullModel, permissive);
     }
 
-    private static Object unwrap(TemplateModel model, TemplateModel nullModel, boolean permissive) throws TemplateModelException {
+    private static Object unwrap(TemplateModel model, TemplateModel nullModel, boolean permissive) throws TemplateException {
         if (model instanceof AdapterTemplateModel) {
             return ((AdapterTemplateModel) model).getAdaptedObject(OBJECT_CLASS);
         }
@@ -105,8 +105,8 @@ public class DeepUnwrap {
         if (model == nullModel) {
             return null;
         }
-        if (model instanceof TemplateScalarModel) {
-            return ((TemplateScalarModel) model).getAsString();
+        if (model instanceof TemplateStringModel) {
+            return ((TemplateStringModel) model).getAsString();
         }
         if (model instanceof TemplateNumberModel) {
             return ((TemplateNumberModel) model).getAsNumber();
@@ -147,6 +147,6 @@ public class DeepUnwrap {
         if (permissive) {
             return model;
         }
-        throw new TemplateModelException("Cannot deep-unwrap model of type " + model.getClass().getName());
+        throw new TemplateException("Cannot deep-unwrap model of type " + model.getClass().getName());
     }
 }

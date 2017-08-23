@@ -45,11 +45,10 @@ import java.util.Set;
 import java.util.TimeZone;
 import java.util.TreeSet;
 
-import org.apache.freemarker.core.model.TemplateModelException;
-import org.apache.freemarker.core.model.TemplateScalarModel;
+import org.apache.freemarker.core.model.TemplateStringModel;
 import org.apache.freemarker.core.model.impl.DefaultObjectWrapper;
 import org.apache.freemarker.core.model.impl.RestrictedObjectWrapper;
-import org.apache.freemarker.core.model.impl.SimpleScalar;
+import org.apache.freemarker.core.model.impl.SimpleString;
 import org.apache.freemarker.core.outputformat.MarkupOutputFormat;
 import org.apache.freemarker.core.outputformat.OutputFormat;
 import org.apache.freemarker.core.outputformat.UnregisteredOutputFormatException;
@@ -82,8 +81,8 @@ import org.apache.freemarker.core.userpkg.EpochMillisTemplateDateFormatFactory;
 import org.apache.freemarker.core.userpkg.HexTemplateNumberFormatFactory;
 import org.apache.freemarker.core.userpkg.NameClashingDummyOutputFormat;
 import org.apache.freemarker.core.userpkg.SeldomEscapedOutputFormat;
-import org.apache.freemarker.core.util._CollectionUtil;
-import org.apache.freemarker.core.util._DateUtil;
+import org.apache.freemarker.core.util._CollectionUtils;
+import org.apache.freemarker.core.util._DateUtils;
 import org.apache.freemarker.core.util._NullWriter;
 import org.apache.freemarker.core.valueformat.TemplateDateFormatFactory;
 import org.apache.freemarker.core.valueformat.TemplateNumberFormatFactory;
@@ -530,7 +529,7 @@ public class ConfigurationTest {
         {
             Template t = cfg.getTemplate("Stat/t.de.ftlx");
             assertEquals("TODO,XML", t.getBooleanFormat());
-            assertEquals(_DateUtil.UTC, t.getTimeZone());
+            assertEquals(_DateUtils.UTC, t.getTimeZone());
         }
         
         assertNotNull(cfgB.getTemplateConfigurations());
@@ -652,24 +651,24 @@ public class ConfigurationTest {
                 .sharedVariables(ImmutableMap.of(
                         "a", "aa",
                         "b", "bb",
-                        "c", new MyScalarModel()
+                        "c", new MyStringModel()
                 ))
                 .build();
 
         assertNull(cfg.getSharedVariables().get("noSuchVar"));
         assertNull(cfg.getWrappedSharedVariable("noSuchVar"));
 
-        TemplateScalarModel aVal = (TemplateScalarModel) cfg.getWrappedSharedVariable("a");
+        TemplateStringModel aVal = (TemplateStringModel) cfg.getWrappedSharedVariable("a");
         assertEquals("aa", aVal.getAsString());
-        assertEquals(SimpleScalar.class, aVal.getClass());
+        assertEquals(SimpleString.class, aVal.getClass());
 
-        TemplateScalarModel bVal = (TemplateScalarModel) cfg.getWrappedSharedVariable("b");
+        TemplateStringModel bVal = (TemplateStringModel) cfg.getWrappedSharedVariable("b");
         assertEquals("bb", bVal.getAsString());
-        assertEquals(SimpleScalar.class, bVal.getClass());
+        assertEquals(SimpleString.class, bVal.getClass());
 
-        TemplateScalarModel cVal = (TemplateScalarModel) cfg.getWrappedSharedVariable("c");
+        TemplateStringModel cVal = (TemplateStringModel) cfg.getWrappedSharedVariable("c");
         assertEquals("my", cVal.getAsString());
-        assertEquals(MyScalarModel.class, cfg.getWrappedSharedVariable("c").getClass());
+        assertEquals(MyStringModel.class, cfg.getWrappedSharedVariable("c").getClass());
 
         // See if it actually works in templates:
         StringWriter sw = new StringWriter();
@@ -848,13 +847,13 @@ public class ConfigurationTest {
     public void testCollectionSettingMutability() throws IOException {
         Builder cb = new Builder(VERSION_3_0_0);
 
-        assertTrue(_CollectionUtil.isMapKnownToBeUnmodifiable(cb.getSharedVariables()));
+        assertTrue(_CollectionUtils.isMapKnownToBeUnmodifiable(cb.getSharedVariables()));
         Map<String, Object> mutableValue = new HashMap<>();
         mutableValue.put("x", "v1");
         cb.setSharedVariables(mutableValue);
         Map<String, Object> immutableValue = cb.getSharedVariables();
         assertNotSame(mutableValue, immutableValue); // Must be a copy
-        assertTrue(_CollectionUtil.isMapKnownToBeUnmodifiable(immutableValue));
+        assertTrue(_CollectionUtils.isMapKnownToBeUnmodifiable(immutableValue));
         assertEquals(mutableValue, immutableValue);
         mutableValue.put("y", "v2");
         assertNotEquals(mutableValue, immutableValue); // No aliasing
@@ -935,10 +934,10 @@ public class ConfigurationTest {
         }
     }
 
-    private static class MyScalarModel implements TemplateScalarModel {
+    private static class MyStringModel implements TemplateStringModel {
 
         @Override
-        public String getAsString() throws TemplateModelException {
+        public String getAsString() throws TemplateException {
             return "my";
         }
         

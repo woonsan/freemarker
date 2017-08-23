@@ -20,7 +20,6 @@
 package org.apache.freemarker.core;
 
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateModelException;
 import org.apache.freemarker.core.util._NullArgumentException;
 
 /**
@@ -47,28 +46,16 @@ public final class _CoreAPI {
         }
     }
 
-    /**
-     * The work around the problematic cases where we should throw a {@link TemplateException}, but we are inside
-     * a {@link TemplateModel} method and so we can only throw {@link TemplateModelException}-s.  
-     */
-    // [FM3] Get rid of this problem, then delete this method
-    public static TemplateModelException ensureIsTemplateModelException(String modelOpMsg, TemplateException e) {
-        if (e instanceof TemplateModelException) {
-            return (TemplateModelException) e;
-        } else {
-            return new _TemplateModelException(
-                    e.getBlamedExpression(), e.getCause(), e.getEnvironment(), modelOpMsg);
-        }
+    public static boolean isMacro(Class<? extends TemplateModel> cl) {
+        return Environment.TemplateLanguageDirective.class.isAssignableFrom(cl);
     }
 
-    // [FM3] Should become unnecessary as custom directive classes are reworked
-    public static boolean isMacroOrFunction(TemplateModel m) {
-        return m instanceof ASTDirMacro;
+    public static boolean isFunction(Class<? extends TemplateModel> cl) {
+        return Environment.TemplateLanguageFunction.class.isAssignableFrom(cl);
     }
 
-    // [FM3] Should become unnecessary as custom directive classes are reworked
-    public static boolean isFunction(TemplateModel m) {
-        return m instanceof ASTDirMacro && ((ASTDirMacro) m).isFunction();
+    public static boolean isTemplateLanguageCallable(Class<? extends TemplateModel> cl) {
+        return Environment.TemplateLanguageCallable.class.isAssignableFrom(cl);
     }
 
     public static void checkVersionNotNullAndSupported(Version incompatibleImprovements) {

@@ -37,13 +37,13 @@ import org.apache.freemarker.core.Environment;
 import org.apache.freemarker.core.MutableProcessingConfiguration;
 import org.apache.freemarker.core.ProcessingConfiguration;
 import org.apache.freemarker.core.Template;
+import org.apache.freemarker.core.TemplateException;
 import org.apache.freemarker.core.model.TemplateCollectionModel;
 import org.apache.freemarker.core.model.TemplateHashModelEx;
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateModelException;
 import org.apache.freemarker.core.model.impl.DefaultObjectWrapper;
 import org.apache.freemarker.core.model.impl.SimpleCollection;
-import org.apache.freemarker.core.model.impl.SimpleScalar;
+import org.apache.freemarker.core.model.impl.SimpleString;
 import org.apache.freemarker.core.util.UndeclaredThrowableException;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -138,7 +138,7 @@ class RmiDebuggedEnvironmentImpl extends RmiDebugModelImpl implements DebuggedEn
         }
 
         @Override
-        public TemplateCollectionModel values() throws TemplateModelException {
+        public TemplateCollectionModel values() throws TemplateException {
             Collection keys = keySet();
             List list = new ArrayList(keys.size());
             
@@ -184,7 +184,7 @@ class RmiDebuggedEnvironmentImpl extends RmiDebugModelImpl implements DebuggedEn
         }
         
         @Override
-        public TemplateModel get(String key) throws TemplateModelException {
+        public TemplateModel get(String key) throws TemplateException {
             return null; // TODO
         }
 
@@ -216,7 +216,7 @@ class RmiDebuggedEnvironmentImpl extends RmiDebugModelImpl implements DebuggedEn
         }
 
         @Override
-        public TemplateModel get(String key) throws TemplateModelException {
+        public TemplateModel get(String key) throws TemplateException {
             if ("sharedVariables".equals(key)) {
                 return sharedVariables; 
             } else {
@@ -229,11 +229,11 @@ class RmiDebuggedEnvironmentImpl extends RmiDebugModelImpl implements DebuggedEn
         private static final List KEYS = composeList(DebugConfigurableModel.KEYS, 
             Arrays.asList("configuration", "name"));
     
-        private final SimpleScalar name;
+        private final SimpleString name;
 
         DebugTemplateModel(Template template) {
             super(template);
-            name = new SimpleScalar(template.getLookupName());
+            name = new SimpleString(template.getLookupName());
         }
 
         @Override
@@ -242,12 +242,12 @@ class RmiDebuggedEnvironmentImpl extends RmiDebugModelImpl implements DebuggedEn
         }
 
         @Override
-        public TemplateModel get(String key) throws TemplateModelException {
+        public TemplateModel get(String key) throws TemplateException {
             if ("configuration".equals(key)) {
                 try {
                     return (TemplateModel) getCachedWrapperFor(((Template) ProcessingConfiguration).getConfiguration());
                 } catch (RemoteException e) {
-                    throw new TemplateModelException(e);
+                    throw new TemplateException(e);
                 }
             }
             if ("name".equals(key)) {
@@ -273,13 +273,13 @@ class RmiDebuggedEnvironmentImpl extends RmiDebugModelImpl implements DebuggedEn
             Collection keySet() {
                 try {
                     return ((Environment) ProcessingConfiguration).getKnownVariableNames();
-                } catch (TemplateModelException e) {
+                } catch (TemplateException e) {
                     throw new UndeclaredThrowableException(e);
                 }
             }
         
             @Override
-            public TemplateModel get(String key) throws TemplateModelException {
+            public TemplateModel get(String key) throws TemplateException {
                 return ((Environment) ProcessingConfiguration).getVariable(key);
             }
         };
@@ -294,7 +294,7 @@ class RmiDebuggedEnvironmentImpl extends RmiDebugModelImpl implements DebuggedEn
         }
 
         @Override
-        public TemplateModel get(String key) throws TemplateModelException {
+        public TemplateModel get(String key) throws TemplateException {
             if ("currentNamespace".equals(key)) {
                 return ((Environment) ProcessingConfiguration).getCurrentNamespace();
             }
@@ -314,14 +314,14 @@ class RmiDebuggedEnvironmentImpl extends RmiDebugModelImpl implements DebuggedEn
                 try {
                     return (TemplateModel) getCachedWrapperFor(((Environment) ProcessingConfiguration).getMainTemplate());
                 } catch (RemoteException e) {
-                    throw new TemplateModelException(e);
+                    throw new TemplateException(e);
                 }
             }
             if ("currentTemplate".equals(key)) {
                 try {
                     return (TemplateModel) getCachedWrapperFor(((Environment) ProcessingConfiguration).getCurrentTemplate());
                 } catch (RemoteException e) {
-                    throw new TemplateModelException(e);
+                    throw new TemplateException(e);
                 }
             }
             return super.get(key);

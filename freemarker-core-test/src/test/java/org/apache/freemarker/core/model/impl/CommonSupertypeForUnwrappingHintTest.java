@@ -22,7 +22,7 @@ package org.apache.freemarker.core.model.impl;
 import java.io.Serializable;
 import java.util.List;
 
-import org.apache.freemarker.core.model.TemplateModelException;
+import org.apache.freemarker.core.model.TemplateModel;
 
 import junit.framework.TestCase;
 
@@ -51,7 +51,7 @@ public class CommonSupertypeForUnwrappingHintTest extends TestCase {
         testArrayAndOther(oms);
     }
     
-    /** These will be the same with oms and buggy: */
+    /** These will be the same with fixed and buggy: */
     private void testArrayAndOther(OverloadedMethodsSubset oms) {
         assertEquals(Serializable.class, oms.getCommonSupertypeForUnwrappingHint(int[].class, String.class));
         assertEquals(Serializable.class, oms.getCommonSupertypeForUnwrappingHint(Object[].class, String.class));
@@ -110,17 +110,17 @@ public class CommonSupertypeForUnwrappingHintTest extends TestCase {
         }
 
         @Override
-        Class[] preprocessParameterTypes(CallableMemberDescriptor memberDesc) {
+        Class<?>[] preprocessParameterTypes(CallableMemberDescriptor memberDesc) {
             return memberDesc.getParamTypes();
         }
 
         @Override
-        void afterWideningUnwrappingHints(Class[] paramTypes, int[] paramNumericalTypes) {
+        void afterWideningUnwrappingHints(Class<?>[] paramTypes, int[] paramNumericalTypes) {
             // Do nothing
         }
 
         @Override
-        MaybeEmptyMemberAndArguments getMemberAndArguments(List tmArgs, DefaultObjectWrapper w) throws TemplateModelException {
+        MaybeEmptyMemberAndArguments getMemberAndArguments(TemplateModel[] tmArgs, DefaultObjectWrapper w) {
             throw new RuntimeException("Not implemented in this dummy.");
         }
         

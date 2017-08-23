@@ -24,10 +24,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.freemarker.core.TemplateException;
+import org.apache.freemarker.core._DelayedJQuote;
 import org.apache.freemarker.core.model.TemplateHashModel;
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateModelException;
-import org.apache.freemarker.core.util._ClassUtil;
+import org.apache.freemarker.core.util._ClassUtils;
 
 /**
  * Base class for hash models keyed by Java class names. 
@@ -43,19 +44,20 @@ abstract class ClassBasedModelFactory implements TemplateHashModel {
     }
 
     @Override
-    public TemplateModel get(String key) throws TemplateModelException {
+    public TemplateModel get(String key) throws TemplateException {
         try {
             return getInternal(key);
         } catch (Exception e) {
-            if (e instanceof TemplateModelException) {
-                throw (TemplateModelException) e;
+            if (e instanceof TemplateException) {
+                throw (TemplateException) e;
             } else {
-                throw new TemplateModelException(e);
+                throw new TemplateException(e,
+                        "Failed to get valeu for key ", new _DelayedJQuote(key), "; see cause exception.");
             }
         }
     }
 
-    private TemplateModel getInternal(String key) throws TemplateModelException, ClassNotFoundException {
+    private TemplateModel getInternal(String key) throws TemplateException, ClassNotFoundException {
         {
             TemplateModel model = (TemplateModel) cache.get(key);
             if (model != null) return model;
@@ -91,7 +93,7 @@ abstract class ClassBasedModelFactory implements TemplateHashModel {
             classIntrospectorClearingCounter = classIntrospector.getClearingCounter();
         }
         try {
-            final Class clazz = _ClassUtil.forName(key);
+            final Class clazz = _ClassUtils.forName(key);
             
             // This is called so that we trigger the
             // class-reloading detector. If clazz is a reloaded class,
@@ -139,7 +141,7 @@ abstract class ClassBasedModelFactory implements TemplateHashModel {
     }
     
     protected abstract TemplateModel createModel(Class clazz) 
-    throws TemplateModelException;
+    throws TemplateException;
     
     protected DefaultObjectWrapper getWrapper() {
         return wrapper;

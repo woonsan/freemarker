@@ -35,11 +35,11 @@ import org.apache.freemarker.converter.ConversionMarkers;
 import org.apache.freemarker.converter.ConverterException;
 import org.apache.freemarker.converter.ConverterUtils;
 import org.apache.freemarker.converter.UnconvertableLegacyFeatureException;
-import org.apache.freemarker.core.util.FTLUtil;
-import org.apache.freemarker.core.util._ClassUtil;
+import org.apache.freemarker.core.util.TemplateLanguageUtils;
+import org.apache.freemarker.core.util._ClassUtils;
 import org.apache.freemarker.core.util._NullArgumentException;
 import org.apache.freemarker.core.util._ObjectHolder;
-import org.apache.freemarker.core.util._StringUtil;
+import org.apache.freemarker.core.util._StringUtils;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -232,7 +232,7 @@ public class FM2ASTToFM3SourceConverter {
     }
 
     private String convertFtlHeaderParamName(String name) throws ConverterException {
-        String converted = name.indexOf('_') == -1 ? name : _StringUtil.snakeCaseToCamelCase(name);
+        String converted = name.indexOf('_') == -1 ? name : _StringUtils.snakeCaseToCamelCase(name);
         if (converted.equals("attributes")) {
             converted = "customSettings";
         }
@@ -246,7 +246,7 @@ public class FM2ASTToFM3SourceConverter {
             printExp((Expression) node);
         } else {
             throw new UnexpectedNodeContentException(node, "Unhandled node class",
-                    _ClassUtil.getShortClassNameOfObject(node));
+                    _ClassUtils.getShortClassNameOfObject(node));
         }
     }
 
@@ -461,7 +461,7 @@ public class FM2ASTToFM3SourceConverter {
         int paramIdx = 1;
         while (paramIdx < node.getParameterCount()) {
             String paramName = getParam(node, paramIdx++, ParameterRole.ARGUMENT_NAME, String.class);
-            print(FTLUtil.escapeIdentifier(paramName));
+            print(TemplateLanguageUtils.escapeIdentifier(paramName));
             pos = getPositionAfterIdentifier(pos);
 
             pos = printSeparatorAndWSAndExpComments(pos, "=");
@@ -592,7 +592,7 @@ public class FM2ASTToFM3SourceConverter {
 
         int pos = printDirStartTagPartBeforeParams(node, "setting");
 
-        print(FTLUtil.escapeIdentifier(convertSettingName(
+        print(TemplateLanguageUtils.escapeIdentifier(convertSettingName(
                 getParam(node, 0, ParameterRole.ITEM_KEY, String.class),
                 node)));
         pos = getPositionAfterIdentifier(pos);
@@ -606,7 +606,7 @@ public class FM2ASTToFM3SourceConverter {
     }
 
     private String convertSettingName(String name, TemplateObject node) throws ConverterException {
-        String converted = name.indexOf('_') == -1 ? name : _StringUtil.snakeCaseToCamelCase(name);
+        String converted = name.indexOf('_') == -1 ? name : _StringUtils.snakeCaseToCamelCase(name);
 
         if (converted.equals("classicCompatible")) {
             throw new UnconvertableLegacyFeatureException("There \"classicCompatible\" setting doesn't exist in "
@@ -671,14 +671,16 @@ public class FM2ASTToFM3SourceConverter {
 
         int paramCnt = node.getParameterCount();
         assertNodeContent(paramCnt <= 2, node, "Expected at most 2 parameters");
-        String loopVar1 = getParam(node, 0, ParameterRole.TARGET_LOOP_VARIABLE, String.class);
-        String loopVar2 = paramCnt >= 2 ? getParam(node, 1, ParameterRole.TARGET_LOOP_VARIABLE, String.class) : null;
+        String nestedContParamName1 = getParam(node, 0, ParameterRole.TARGET_LOOP_VARIABLE, String.class);
+        String nestedContParamName2 =
+                paramCnt >= 2 ? getParam(node, 1, ParameterRole.TARGET_LOOP_VARIABLE, String.class)
+                : null;
 
-        print(FTLUtil.escapeIdentifier(loopVar1));
+        print(TemplateLanguageUtils.escapeIdentifier(nestedContParamName1));
         pos = getPositionAfterIdentifier(pos);
-        if (loopVar2 != null) {
+        if (nestedContParamName2 != null) {
             pos = printSeparatorAndWSAndExpComments(pos, ",");
-            print(FTLUtil.escapeIdentifier(loopVar2));
+            print(TemplateLanguageUtils.escapeIdentifier(nestedContParamName2));
             pos = getPositionAfterIdentifier(pos);
         }
 
@@ -732,13 +734,13 @@ public class FM2ASTToFM3SourceConverter {
             if (loopVal1 != null) { // #list xs as <v1 | v1, v2>
                 pos = printSeparatorAndWSAndExpComments(getEndPositionExclusive(listSource), "as");
 
-                print(FTLUtil.escapeIdentifier(loopVal1));
+                print(TemplateLanguageUtils.escapeIdentifier(loopVal1));
                 pos = getPositionAfterAssignmentTargetIdentifier(pos);
 
                 if (loopVal2 != null) { // #list xs as <v1, v2>
                     pos = printSeparatorAndWSAndExpComments(pos, ",");
 
-                    print(FTLUtil.escapeIdentifier(loopVal2));
+                    print(TemplateLanguageUtils.escapeIdentifier(loopVal2));
                     pos = getPositionAfterAssignmentTargetIdentifier(pos);
                 }
 
@@ -778,7 +780,7 @@ public class FM2ASTToFM3SourceConverter {
             printExp(listSource);
             printWithConvertedExpComments(ConverterUtils.rightTrim(postVar2WSAndComment));
             print(" as ");
-            print(FTLUtil.escapeIdentifier(loopVal1));
+            print(TemplateLanguageUtils.escapeIdentifier(loopVal1));
             printWithConvertedExpComments(ConverterUtils.rightTrim(postVar1WSAndComment));
             printWithConvertedExpComments(ConverterUtils.rightTrim(postInWSAndComment));
         } else {
@@ -890,7 +892,7 @@ public class FM2ASTToFM3SourceConverter {
 
         int pos = printSeparatorAndWSAndExpComments(getEndPositionExclusive(templateName), "as");
 
-        print(FTLUtil.escapeIdentifier(getParam(node, 1, ParameterRole.NAMESPACE, String.class)));
+        print(TemplateLanguageUtils.escapeIdentifier(getParam(node, 1, ParameterRole.NAMESPACE, String.class)));
         pos = getPositionAfterIdentifier(pos);
 
         printDirStartTagEnd(node, pos, false);
@@ -923,7 +925,7 @@ public class FM2ASTToFM3SourceConverter {
         int pos = printDirStartTagPartBeforeParams(node, "escape");
 
         pos = getPositionAfterIdentifier(pos);
-        print(FTLUtil.escapeIdentifier(getParam(node, 0, ParameterRole.PLACEHOLDER_VARIABLE, String.class)));
+        print(TemplateLanguageUtils.escapeIdentifier(getParam(node, 0, ParameterRole.PLACEHOLDER_VARIABLE, String.class)));
 
         pos = printSeparatorAndWSAndExpComments(pos, "as");
 
@@ -1021,7 +1023,7 @@ public class FM2ASTToFM3SourceConverter {
 
         int pos = printDirAssignmentCommonTagTillAssignmentExp(node, 1);
 
-        print(FTLUtil.escapeIdentifier(getParam(node, 0, ParameterRole.ASSIGNMENT_TARGET, String.class)));
+        print(TemplateLanguageUtils.escapeIdentifier(getParam(node, 0, ParameterRole.ASSIGNMENT_TARGET, String.class)));
         pos = getPositionAfterAssignmentTargetIdentifier(pos);
 
         Expression namespace = getParam(node, 2, ParameterRole.NAMESPACE, Expression.class);
@@ -1073,7 +1075,7 @@ public class FM2ASTToFM3SourceConverter {
 
     private int printDirAssignmentCommonExp(Assignment node, int pos) throws ConverterException {
         String target = getParam(node, 0, ParameterRole.ASSIGNMENT_TARGET, String.class);
-        print(FTLUtil.escapeIdentifier(target));
+        print(TemplateLanguageUtils.escapeIdentifier(target));
         pos = getPositionAfterAssignmentTargetIdentifier(pos);
 
         pos = printWSAndExpComments(pos);
@@ -1116,7 +1118,7 @@ public class FM2ASTToFM3SourceConverter {
         int pos = printDirStartTagPartBeforeParams(node, tagName);
 
         String assignedName = getParam(node, 0, ParameterRole.ASSIGNMENT_TARGET, String.class);
-        print(FTLUtil.escapeIdentifier(assignedName));
+        print(TemplateLanguageUtils.escapeIdentifier(assignedName));
         pos = getPositionAfterAssignmentTargetIdentifier(pos);
 
         {
@@ -1152,7 +1154,7 @@ public class FM2ASTToFM3SourceConverter {
         int paramIdx = 1;
         while (node.getParameterRole(paramIdx) == ParameterRole.PARAMETER_NAME) {
             String paramName = getParam(node, paramIdx++, ParameterRole.PARAMETER_NAME, String.class);
-            print(FTLUtil.escapeIdentifier(paramName));
+            print(TemplateLanguageUtils.escapeIdentifier(paramName));
             pos = getPositionAfterIdentifier(pos);
 
             Expression paramDefault = getParam(node, paramIdx++, ParameterRole.PARAMETER_DEFAULT, Expression.class);
@@ -1202,7 +1204,7 @@ public class FM2ASTToFM3SourceConverter {
         }
         String paramName = getParam(node, paramIdx++, ParameterRole.CATCH_ALL_PARAMETER_NAME, String.class);
         if (paramName != null) {
-            print(FTLUtil.escapeIdentifier(paramName));
+            print(TemplateLanguageUtils.escapeIdentifier(paramName));
             pos = getPositionAfterIdentifier(pos);
             pos = printWSAndExpComments(pos);
             assertNodeContent(src.startsWith("...", pos), node,
@@ -1310,7 +1312,7 @@ public class FM2ASTToFM3SourceConverter {
             if (ftlDirMode) {
                 paramName = convertFtlHeaderParamName(paramName);
             }
-            print(FTLUtil.escapeIdentifier(paramName));
+            print(TemplateLanguageUtils.escapeIdentifier(paramName));
             printSeparatorAndWSAndExpComments(pos, "=");
             printExp(argValue);
 
@@ -1318,20 +1320,20 @@ public class FM2ASTToFM3SourceConverter {
             paramIdx += 2;
         }
 
-        // Print loop variables:
+        // Print nested content parameters (aka. loop variables):
         int pos = lastParamEnd;
-        boolean beforeFirstLoopVar = true;
+        boolean beforeFirstNestedContParam = true;
         while (paramIdx < paramCount) {
-            pos = printSeparatorAndWSAndExpComments(pos, beforeFirstLoopVar ? ";" : ",");
+            pos = printSeparatorAndWSAndExpComments(pos, beforeFirstNestedContParam ? ";" : ",");
 
-            String loopVarName = getParam(node, paramIdx, ParameterRole.TARGET_LOOP_VARIABLE, String.class);
-            print(_StringUtil.toFTLTopLevelIdentifierReference(loopVarName));
+            String nestedContParamName = getParam(node, paramIdx, ParameterRole.TARGET_LOOP_VARIABLE, String.class);
+            print(_StringUtils.toFTLTopLevelIdentifierReference(nestedContParamName));
             String identifierInSrc = readIdentifier(pos);
             assertNodeContent(identifierInSrc.length() != 0, node,
-                    "Can't find loop variable identifier in source");
+                    "Can't find nested content parameter name in the source");
             pos += identifierInSrc.length(); // skip loop var name
 
-            beforeFirstLoopVar = false;
+            beforeFirstNestedContParam = false;
             paramIdx++;
         }
 
@@ -1483,7 +1485,7 @@ public class FM2ASTToFM3SourceConverter {
         printWithConvertedExpComments(src.substring(wsStartPos, opPos));
         String operatorInSrc = src.substring(opPos, opPos + operator.length());
         assertNodeContent(operatorInSrc.equals(operator), node,
-                "Expected " + _StringUtil.jQuote(operator) + ", found {}", operatorInSrc);
+                "Expected " + _StringUtils.jQuote(operator) + ", found {}", operatorInSrc);
         print(operator);
     }
 
@@ -1598,7 +1600,7 @@ public class FM2ASTToFM3SourceConverter {
     }
 
     private String convertBuiltInVariableName(String name) throws ConverterException {
-        String converted = name.indexOf('_') == -1 ? name : _StringUtil.snakeCaseToCamelCase(name);
+        String converted = name.indexOf('_') == -1 ? name : _StringUtils.snakeCaseToCamelCase(name);
 
         if (converted.equals("currentNode")) {
             converted = "node";
@@ -1618,7 +1620,7 @@ public class FM2ASTToFM3SourceConverter {
         printSeparatorAndWSAndExpComments(getEndPositionExclusive(lho), ".");
 
         rho = mapStringHashKey(rho);
-        print(rho.startsWith("*") ? rho : FTLUtil.escapeIdentifier(rho));
+        print(rho.startsWith("*") ? rho : TemplateLanguageUtils.escapeIdentifier(rho));
     }
 
     private String mapStringHashKey(String key) {
@@ -1636,7 +1638,7 @@ public class FM2ASTToFM3SourceConverter {
     static {
         Map<String, String> domKeyMapping = new HashMap<>();
         for (String atAtKey : AtAtKeyAccessor.getAtAtKeys()) {
-            String atAtKeyCC = _StringUtil.snakeCaseToCamelCase(atAtKey);
+            String atAtKeyCC = _StringUtils.snakeCaseToCamelCase(atAtKey);
             if (!atAtKeyCC.equals(atAtKey)) {
                 domKeyMapping.put(atAtKey, atAtKeyCC);
             }
@@ -1792,7 +1794,7 @@ public class FM2ASTToFM3SourceConverter {
     }
 
     private void printExpIdentifier(Identifier node) {
-        print(FTLUtil.escapeIdentifier(node.getName()));
+        print(TemplateLanguageUtils.escapeIdentifier(node.getName()));
     }
 
     private void printExpMethodCall(MethodCall node) throws ConverterException {
@@ -1909,7 +1911,7 @@ public class FM2ASTToFM3SourceConverter {
         if (parameterCount == 0) {
             _NullArgumentException.check("value", value);
             if (!rawString) {
-                print(FTLUtil.escapeStringLiteralPart(value, quote, escapeAmp, escapeLT, escapeGT));
+                print(TemplateLanguageUtils.escapeStringLiteralPart(value, quote, escapeAmp, escapeLT, escapeGT));
             } else {
                 print(value);
             }
@@ -1923,7 +1925,8 @@ public class FM2ASTToFM3SourceConverter {
             for (int paramIdx = 0; paramIdx < parameterCount; paramIdx++) {
                 Object param = getParam(node, paramIdx, ParameterRole.VALUE_PART, Object.class);
                 if (param instanceof String) {
-                    print(FTLUtil.escapeStringLiteralPart((String) param, quote, escapeAmp, escapeLT, escapeGT));
+                    print(TemplateLanguageUtils
+                            .escapeStringLiteralPart((String) param, quote, escapeAmp, escapeLT, escapeGT));
                 } else {
                     assertNodeContent(param instanceof Interpolation, node,
                             "Unexpected parameter type: {}", param.getClass().getName());
@@ -1942,7 +1945,7 @@ public class FM2ASTToFM3SourceConverter {
                     String interp = out.substring(interpStartPos, interpEndPos);
                     out.setLength(interpStartPos + 2); // +2 to keep the "${"
                     String inerpInside = interp.substring(2, interp.length() - 1);
-                    print(FTLUtil.escapeStringLiteralPart(inerpInside, quote)); // For now we escape as FTL2
+                    print(TemplateLanguageUtils.escapeStringLiteralPart(inerpInside, quote)); // For now we escape as FTL2
                     print(interp.charAt(interp.length() - 1)); // "}"
                 }
             }
@@ -1954,7 +1957,7 @@ public class FM2ASTToFM3SourceConverter {
     private String convertBuiltInName(String name) throws ConverterException {
         String converted = IRREGULAR_BUILT_IN_NAME_CONVERSIONS.get(name);
         if (converted == null) {
-            converted = name.indexOf('_') == -1 ? name : _StringUtil.snakeCaseToCamelCase(name);
+            converted = name.indexOf('_') == -1 ? name : _StringUtils.snakeCaseToCamelCase(name);
         }
 
         if (!fm3BuiltInNames.contains(converted)) {
@@ -1967,6 +1970,12 @@ public class FM2ASTToFM3SourceConverter {
     private static Map<String, String> IRREGULAR_BUILT_IN_NAME_CONVERSIONS = new ImmutableMap.Builder<String, String>()
             .put("webSafe", "html")
             .put("web_safe", "html")
+            .put("is_transform", "isDirective")
+            .put("isTransform", "isDirective")
+            .put("is_macro", "isDirective")
+            .put("isMacro", "isDirective")
+            .put("is_method", "isFunction")
+            .put("isMethod", "isFunction")
             .put("iso_utc_fz", "isoUtcFZ")
             .put("iso_utc_nz", "isoUtcNZ")
             .put("iso_utc_ms_nz", "isoUtcMsNZ")
@@ -2405,7 +2414,7 @@ public class FM2ASTToFM3SourceConverter {
         if (pos == src.length() || !src.startsWith(separatorSymbol, pos)) {
             if (!separatorOptional) {
                 throw new ConverterException(
-                        "Expected separator " + _StringUtil.jQuote(separatorSymbol) + " at position " + pos + ".");
+                        "Expected separator " + _StringUtils.jQuote(separatorSymbol) + " at position " + pos + ".");
             }
             if (separatorPosInOutput != null) {
                 separatorPosInOutput.set(null);

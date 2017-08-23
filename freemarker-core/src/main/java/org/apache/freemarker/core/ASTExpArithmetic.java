@@ -53,7 +53,7 @@ final class ASTExpArithmetic extends ASTExpression {
 
     static TemplateModel _eval(Environment env, ASTNode parent, Number lhoNumber, int operator, Number rhoNumber)
             throws TemplateException {
-        ArithmeticEngine ae = _EvalUtil.getArithmeticEngine(env, parent);
+        ArithmeticEngine ae = _EvalUtils.getArithmeticEngine(env, parent);
         switch (operator) {
             case TYPE_SUBSTRACTION : 
                 return new SimpleNumber(ae.subtract(lhoNumber, rhoNumber));
@@ -65,10 +65,10 @@ final class ASTExpArithmetic extends ASTExpression {
                 return new SimpleNumber(ae.modulus(lhoNumber, rhoNumber));
             default:
                 if (parent instanceof ASTExpression) {
-                    throw new _MiscTemplateException((ASTExpression) parent,
+                    throw new TemplateException((ASTExpression) parent,
                             "Unknown operation: ", Integer.valueOf(operator));
                 } else {
-                    throw new _MiscTemplateException("Unknown operation: ", Integer.valueOf(operator));
+                    throw new TemplateException("Unknown operation: ", Integer.valueOf(operator));
                 }
         }
     }

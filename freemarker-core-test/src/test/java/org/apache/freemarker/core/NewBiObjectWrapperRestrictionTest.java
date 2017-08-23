@@ -25,16 +25,16 @@ import java.util.Collection;
 import java.util.Map;
 
 import org.apache.freemarker.core.model.ObjectWrapper;
+import org.apache.freemarker.core.model.ObjectWrappingException;
 import org.apache.freemarker.core.model.TemplateBooleanModel;
 import org.apache.freemarker.core.model.TemplateDateModel;
 import org.apache.freemarker.core.model.TemplateModel;
 import org.apache.freemarker.core.model.TemplateModelAdapter;
-import org.apache.freemarker.core.model.TemplateModelException;
 import org.apache.freemarker.core.model.impl.DefaultObjectWrapper;
 import org.apache.freemarker.core.model.impl.SimpleDate;
 import org.apache.freemarker.core.model.impl.SimpleHash;
 import org.apache.freemarker.core.model.impl.SimpleNumber;
-import org.apache.freemarker.core.model.impl.SimpleScalar;
+import org.apache.freemarker.core.model.impl.SimpleString;
 import org.apache.freemarker.core.model.impl.SimpleSequence;
 import org.apache.freemarker.test.TemplateTest;
 import org.apache.freemarker.test.TestConfigurationBuilder;
@@ -67,7 +67,7 @@ public class NewBiObjectWrapperRestrictionTest extends TemplateTest {
     public static class EntirelyCustomObjectWrapper implements ObjectWrapper {
 
         @Override
-        public TemplateModel wrap(Object obj) throws TemplateModelException {
+        public TemplateModel wrap(Object obj) throws ObjectWrappingException {
             if (obj == null) {
                 return null;
             }
@@ -80,7 +80,7 @@ public class NewBiObjectWrapperRestrictionTest extends TemplateTest {
             }
 
             if (obj instanceof String) {
-                return new SimpleScalar((String) obj);
+                return new SimpleString((String) obj);
             }
             if (obj instanceof Number) {
                 return new SimpleNumber((Number) obj);

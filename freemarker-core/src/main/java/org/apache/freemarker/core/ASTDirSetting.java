@@ -24,9 +24,9 @@ import java.util.Set;
 import org.apache.freemarker.core.model.TemplateBooleanModel;
 import org.apache.freemarker.core.model.TemplateModel;
 import org.apache.freemarker.core.model.TemplateNumberModel;
-import org.apache.freemarker.core.model.TemplateScalarModel;
+import org.apache.freemarker.core.model.TemplateStringModel;
 import org.apache.freemarker.core.util._SortedArraySet;
-import org.apache.freemarker.core.util._StringUtil;
+import org.apache.freemarker.core.util._StringUtils;
 
 /**
  * AST directive node: {@code #setting}.
@@ -60,12 +60,12 @@ final class ASTDirSetting extends ASTDirective {
                         + "supported.");                
             } else {
                 sb.append("Unknown setting name: ");
-                sb.append(_StringUtil.jQuote(key)).append(".");
+                sb.append(_StringUtils.jQuote(key)).append(".");
 
                 String correctedKey;
                 if (key.indexOf('_') != -1) {
-                    sb.append(MessageUtil.FM3_SNAKE_CASE);
-                    correctedKey = _StringUtil.snakeCaseToCamelCase(key);
+                    sb.append(MessageUtils.FM3_SNAKE_CASE);
+                    correctedKey = _StringUtils.snakeCaseToCamelCase(key);
                     if (!SETTING_NAMES.contains(correctedKey)) {
                         if (key.equals("datetime_format")) {
                             correctedKey = "dateTimeFormat";
@@ -107,8 +107,8 @@ final class ASTDirSetting extends ASTDirective {
     ASTElement[] accept(Environment env) throws TemplateException {
         TemplateModel mval = value.eval(env);
         String strval;
-        if (mval instanceof TemplateScalarModel) {
-            strval = ((TemplateScalarModel) mval).getAsString();
+        if (mval instanceof TemplateStringModel) {
+            strval = ((TemplateStringModel) mval).getAsString();
         } else if (mval instanceof TemplateBooleanModel) {
             strval = ((TemplateBooleanModel) mval).getAsBoolean() ? "true" : "false";
         } else if (mval instanceof TemplateNumberModel) {
@@ -119,7 +119,7 @@ final class ASTDirSetting extends ASTDirective {
         try {
             env.setSetting(key, strval);
         } catch (ConfigurationException e) {
-            throw new _MiscTemplateException(env, e.getMessage(), e.getCause());
+            throw new TemplateException(env, e.getMessage(), e.getCause());
         }
         return null;
     }
@@ -130,7 +130,7 @@ final class ASTDirSetting extends ASTDirective {
         if (canonical) sb.append('<');
         sb.append(getASTNodeDescriptor());
         sb.append(' ');
-        sb.append(_StringUtil.toFTLTopLevelTragetIdentifier(key));
+        sb.append(_StringUtils.toFTLTopLevelTragetIdentifier(key));
         sb.append('=');
         sb.append(value.getCanonicalForm());
         if (canonical) sb.append("/>");

@@ -19,12 +19,11 @@
 
 package org.apache.freemarker.core.templatesuite.models;
 
-import org.apache.freemarker.core.model.TemplateModelException;
 import org.apache.freemarker.core.model.TemplateNumberModel;
-import org.apache.freemarker.core.model.TemplateScalarModel;
+import org.apache.freemarker.core.model.TemplateStringModel;
 
 public class NumberAndStringModel implements TemplateNumberModel,
-		TemplateScalarModel {
+        TemplateStringModel {
 	
 	private final String s;
 	
@@ -34,13 +33,13 @@ public class NumberAndStringModel implements TemplateNumberModel,
 	}
 
 	@Override
-    public String getAsString() throws TemplateModelException {
+    public String getAsString() {
 		return s;
 	}
 
 	@Override
     @SuppressWarnings("boxing")
-    public Number getAsNumber() throws TemplateModelException {
+    public Number getAsNumber() {
 		return s.length();
 	}
 

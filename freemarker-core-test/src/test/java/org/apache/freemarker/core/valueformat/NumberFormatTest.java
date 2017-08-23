@@ -22,21 +22,22 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
+import java.io.Writer;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Collections;
 import java.util.Locale;
 import java.util.Map;
 
+import org.apache.freemarker.core.CallPlace;
 import org.apache.freemarker.core.Configuration;
 import org.apache.freemarker.core.Environment;
 import org.apache.freemarker.core.Template;
 import org.apache.freemarker.core.TemplateConfiguration;
 import org.apache.freemarker.core.TemplateException;
-import org.apache.freemarker.core.model.TemplateDirectiveBody;
+import org.apache.freemarker.core.model.ArgumentArrayLayout;
 import org.apache.freemarker.core.model.TemplateDirectiveModel;
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateModelException;
 import org.apache.freemarker.core.model.TemplateNumberModel;
 import org.apache.freemarker.core.model.impl.SimpleNumber;
 import org.apache.freemarker.core.templateresolver.ConditionalTemplateConfigurationFactory;
@@ -177,11 +178,20 @@ public class NumberFormatTest extends TemplateTest {
         nm.setNumber(123);
         addToDataModel("n", nm);
         addToDataModel("incN", new TemplateDirectiveModel() {
-            
             @Override
-            public void execute(Environment env, Map params, TemplateModel[] loopVars, TemplateDirectiveBody body)
+            public void execute(TemplateModel[] args, CallPlace callPlace, Writer out, Environment env)
                     throws TemplateException, IOException {
                 nm.setNumber(nm.getAsNumber().intValue() + 1);
+            }
+
+            @Override
+            public ArgumentArrayLayout getDirectiveArgumentArrayLayout() {
+                return ArgumentArrayLayout.PARAMETERLESS;
+            }
+
+            @Override
+            public boolean isNestedContentSupported() {
+                return false;
             }
         });
         assertOutput(
@@ -356,7 +366,7 @@ public class NumberFormatTest extends TemplateTest {
         }
 
         @Override
-        public Number getAsNumber() throws TemplateModelException {
+        public Number getAsNumber() throws TemplateException {
             return number;
         }
         

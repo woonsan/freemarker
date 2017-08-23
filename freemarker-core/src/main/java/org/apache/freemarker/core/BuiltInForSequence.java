@@ -20,7 +20,6 @@
 package org.apache.freemarker.core;
 
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateModelException;
 import org.apache.freemarker.core.model.TemplateSequenceModel;
 
 abstract class BuiltInForSequence extends ASTExpBuiltIn {
@@ -29,10 +28,10 @@ abstract class BuiltInForSequence extends ASTExpBuiltIn {
             throws TemplateException {
         TemplateModel model = target.eval(env);
         if (!(model instanceof TemplateSequenceModel)) {
-            throw new NonSequenceException(target, model, env);
+            throw MessageUtils.newUnexpectedOperandTypeException(target, model, TemplateSequenceModel.class, env);
         }
         return calculateResult((TemplateSequenceModel) model);
     }
     abstract TemplateModel calculateResult(TemplateSequenceModel tsm)
-    throws TemplateModelException;
+            throws TemplateException;
 }

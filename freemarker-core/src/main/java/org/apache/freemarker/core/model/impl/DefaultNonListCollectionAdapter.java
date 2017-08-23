@@ -19,17 +19,16 @@
 
 package org.apache.freemarker.core.model.impl;
 
-import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
 
+import org.apache.freemarker.core.TemplateException;
 import org.apache.freemarker.core.model.AdapterTemplateModel;
 import org.apache.freemarker.core.model.ObjectWrapper;
 import org.apache.freemarker.core.model.ObjectWrapperAndUnwrapper;
 import org.apache.freemarker.core.model.ObjectWrapperWithAPISupport;
 import org.apache.freemarker.core.model.TemplateCollectionModelEx;
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateModelException;
 import org.apache.freemarker.core.model.TemplateModelIterator;
 import org.apache.freemarker.core.model.TemplateModelWithAPISupport;
 import org.apache.freemarker.core.model.WrapperTemplateModel;
@@ -46,7 +45,7 @@ import org.apache.freemarker.core.model.WrappingTemplateModel;
  * these collections (though of course, Java methods called from the template can violate this rule).
  */
 public class DefaultNonListCollectionAdapter extends WrappingTemplateModel implements TemplateCollectionModelEx,
-        AdapterTemplateModel, WrapperTemplateModel, TemplateModelWithAPISupport, Serializable {
+        AdapterTemplateModel, WrapperTemplateModel, TemplateModelWithAPISupport {
 
     private final Collection collection;
 
@@ -69,7 +68,7 @@ public class DefaultNonListCollectionAdapter extends WrappingTemplateModel imple
     }
 
     @Override
-    public TemplateModelIterator iterator() throws TemplateModelException {
+    public TemplateModelIterator iterator() throws TemplateException {
         return new DefaultUnassignableIteratorAdapter(collection.iterator(), getObjectWrapper());
     }
 
@@ -94,7 +93,7 @@ public class DefaultNonListCollectionAdapter extends WrappingTemplateModel imple
     }
 
     @Override
-    public TemplateModel getAPI() throws TemplateModelException {
+    public TemplateModel getAPI() throws TemplateException {
         return ((ObjectWrapperWithAPISupport) getObjectWrapper()).wrapAsAPI(collection);
     }
 

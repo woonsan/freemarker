@@ -35,11 +35,11 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 
+import org.apache.freemarker.core.model.ObjectWrappingException;
 import org.apache.freemarker.core.model.TemplateHashModel;
-import org.apache.freemarker.core.model.TemplateMethodModelEx;
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateModelException;
 import org.apache.freemarker.core.model.impl.DefaultObjectWrapper;
+import org.apache.freemarker.core.model.impl.JavaMethodModel;
 import org.apache.freemarker.core.model.impl.RestrictedObjectWrapper;
 import org.apache.freemarker.core.outputformat.impl.HTMLOutputFormat;
 import org.apache.freemarker.core.outputformat.impl.PlainTextOutputFormat;
@@ -58,10 +58,10 @@ import org.apache.freemarker.core.templateresolver.OrMatcher;
 import org.apache.freemarker.core.templateresolver.PathGlobMatcher;
 import org.apache.freemarker.core.templateresolver.PathRegexMatcher;
 import org.apache.freemarker.core.util.BugException;
-import org.apache.freemarker.core.util.FTLUtil;
 import org.apache.freemarker.core.util.GenericParseException;
-import org.apache.freemarker.core.util._ClassUtil;
-import org.apache.freemarker.core.util._StringUtil;
+import org.apache.freemarker.core.util.TemplateLanguageUtils;
+import org.apache.freemarker.core.util._ClassUtils;
+import org.apache.freemarker.core.util._StringUtils;
 
 /**
  * Don't use this; used internally by FreeMarker, might changes without notice.
@@ -533,7 +533,7 @@ public class _ObjectBuilderSettingEvaluator {
         final String sInside = src.substring(startPos + (raw ? 2 : 1), pos);
         try {
             pos++; // skip closing quotation mark
-            return raw ? sInside : FTLUtil.unescapeStringLiteralPart(sInside);
+            return raw ? sInside : TemplateLanguageUtils.unescapeStringLiteralPart(sInside);
         } catch (GenericParseException e) {
             throw new _ObjectBuilderSettingEvaluationException("Malformed string literal: " + sInside, e);
         }
@@ -634,7 +634,7 @@ public class _ObjectBuilderSettingEvaluator {
                 if (i != 0) {
                     sb.append(" or ");
                 }
-                sb.append(_StringUtil.jQuote(expectedChars.substring(i, i + 1)));
+                sb.append(_StringUtils.jQuote(expectedChars.substring(i, i + 1)));
             }
             throw new _ObjectBuilderSettingEvaluationException(
                     sb.toString(),
@@ -712,17 +712,17 @@ public class _ObjectBuilderSettingEvaluator {
     }
 
     private void setJavaBeanProperties(Object bean,
-            List/*<String>*/ namedParamNames, List/*<Object>*/ namedParamValues)
+            List<String> namedParamNames, List<Object> namedParamValues)
             throws _ObjectBuilderSettingEvaluationException {
         if (namedParamNames.isEmpty()) {
             return;
         }
         
-        final Class cl = bean.getClass();
-        Map/*<String,Method>*/ beanPropSetters;
+        final Class<?> cl = bean.getClass();
+        Map<String, Method> beanPropSetters;
         try {
             PropertyDescriptor[] propDescs = Introspector.getBeanInfo(cl).getPropertyDescriptors();
-            beanPropSetters = new HashMap(propDescs.length * 4 / 3, 1.0f);
+            beanPropSetters = new HashMap<>(propDescs.length * 4 / 3, 1.0f);
             for (PropertyDescriptor propDesc : propDescs) {
                 final Method writeMethod = propDesc.getWriteMethod();
                 if (writeMethod != null) {
@@ -735,17 +735,17 @@ public class _ObjectBuilderSettingEvaluator {
 
         TemplateHashModel beanTM = null;
         for (int i = 0; i < namedParamNames.size(); i++) {
-            String name = (String) namedParamNames.get(i);
+            String name = namedParamNames.get(i);
             if (!beanPropSetters.containsKey(name)) {
                 throw new _ObjectBuilderSettingEvaluationException(
                         "The " + cl.getName() + " class has no writeable JavaBeans property called "
-                        + _StringUtil.jQuote(name) + ".");
+                        + _StringUtils.jQuote(name) + ".");
             }
             
-            Method beanPropSetter = (Method) beanPropSetters.put(name, null);
+            Method beanPropSetter = beanPropSetters.put(name, null);
             if (beanPropSetter == null) {
                     throw new _ObjectBuilderSettingEvaluationException(
-                            "JavaBeans property " + _StringUtil.jQuote(name) + " is set twice.");
+                            "JavaBeans property " + _StringUtils.jQuote(name) + " is set twice.");
             }
             
             try {
@@ -757,22 +757,23 @@ public class _ObjectBuilderSettingEvaluator {
                     }
                     beanTM = (TemplateHashModel) wrappedObj;
                 }
-                
+
                 TemplateModel m = beanTM.get(beanPropSetter.getName());
                 if (m == null) {
                     throw new _ObjectBuilderSettingEvaluationException(
                             "Can't find " + beanPropSetter + " as FreeMarker method.");
                 }
-                if (!(m instanceof TemplateMethodModelEx)) {
+                if (!(m instanceof JavaMethodModel)) {
                     throw new _ObjectBuilderSettingEvaluationException(
-                            _StringUtil.jQuote(beanPropSetter.getName()) + " wasn't a TemplateMethodModelEx.");
+                            _StringUtils.jQuote(beanPropSetter.getName()) + " wasn't a JavaMethodModel.");
                 }
                 List/*TemplateModel*/ args = new ArrayList();
-                args.add(env.getObjectWrapper().wrap(namedParamValues.get(i)));
-                ((TemplateMethodModelEx) m).exec(args);
+                ((JavaMethodModel) m).execute(
+                        new TemplateModel[] { env.getObjectWrapper().wrap(namedParamValues.get(i)) },
+                        NonTemplateCallPlace.INSTANCE);
             } catch (Exception e) {
                 throw new _ObjectBuilderSettingEvaluationException(
-                        "Failed to set " + _StringUtil.jQuote(name), e);
+                        "Failed to set " + _StringUtils.jQuote(name), e);
             }
         }
     }
@@ -876,16 +877,16 @@ public class _ObjectBuilderSettingEvaluator {
             
             boolean clIsBuilderClass;
             try {
-                cl = _ClassUtil.forName(className + BUILDER_CLASS_POSTFIX_1);
+                cl = _ClassUtils.forName(className + BUILDER_CLASS_POSTFIX_1);
                 clIsBuilderClass = true;
             } catch (ClassNotFoundException eIgnored) {
                 try {
-                    cl = _ClassUtil.forName(className + BUILDER_CLASS_POSTFIX_2);
+                    cl = _ClassUtils.forName(className + BUILDER_CLASS_POSTFIX_2);
                     clIsBuilderClass = true;
                 } catch (ClassNotFoundException e) {
                     clIsBuilderClass = false;
                     try {
-                        cl = _ClassUtil.forName(className);
+                        cl = _ClassUtils.forName(className);
                     } catch (Exception e2) {
                         boolean failedToGetAsStaticField;
                         if (canBeStaticField && className.indexOf('.') != -1) {
@@ -900,7 +901,7 @@ public class _ObjectBuilderSettingEvaluator {
                             failedToGetAsStaticField = false;
                         }
                         throw new _ObjectBuilderSettingEvaluationException(
-                                "Failed to get class " + _StringUtil.jQuote(className)
+                                "Failed to get class " + _StringUtils.jQuote(className)
                                         + (failedToGetAsStaticField ? " (also failed to resolve name as static field)" : "")
                                         + ".",
                                 e2);
@@ -919,7 +920,7 @@ public class _ObjectBuilderSettingEvaluator {
                     // Expected
                 } catch (Exception e) {
                     throw new _ObjectBuilderSettingEvaluationException(
-                            "Error when trying to access " + _StringUtil.jQuote(className) + "."
+                            "Error when trying to access " + _StringUtils.jQuote(className) + "."
                             + INSTANCE_FIELD_NAME, e);
                 }
             }
@@ -943,10 +944,10 @@ public class _ObjectBuilderSettingEvaluator {
 
             Class<?> cl;
             try {
-                cl = _ClassUtil.forName(className);
+                cl = _ClassUtils.forName(className);
             } catch (Exception e) {
                 throw new _ObjectBuilderSettingEvaluationException(
-                        "Failed to get field's parent class, " + _StringUtil.jQuote(className) + ".",
+                        "Failed to get field's parent class, " + _StringUtils.jQuote(className) + ".",
                         e);
             }
             
@@ -955,8 +956,8 @@ public class _ObjectBuilderSettingEvaluator {
                 field = cl.getField(fieldName);
             } catch (Exception e) {
                 throw new _ObjectBuilderSettingEvaluationException(
-                        "Failed to get field " + _StringUtil.jQuote(fieldName) + " from class "
-                        + _StringUtil.jQuote(className) + ".",
+                        "Failed to get field " + _StringUtils.jQuote(fieldName) + " from class "
+                        + _StringUtils.jQuote(className) + ".",
                         e);
             }
             
@@ -992,16 +993,16 @@ public class _ObjectBuilderSettingEvaluator {
                 }
             } else {
                 DefaultObjectWrapper ow = env.getObjectWrapper();
-                List/*<TemplateModel>*/ tmArgs = new ArrayList(positionalParamValues.size());
+                TemplateModel[] tmArgs = new TemplateModel[positionalParamValues.size()];
                 for (int i = 0; i < positionalParamValues.size(); i++) {
                     try {
-                        tmArgs.add(ow.wrap(positionalParamValues.get(i)));
-                    } catch (TemplateModelException e) {
+                        tmArgs[i] = ow.wrap(positionalParamValues.get(i));
+                    } catch (ObjectWrappingException e) {
                         throw new _ObjectBuilderSettingEvaluationException("Failed to wrap arg #" + (i + 1), e);
                     }
                 }
                 try {
-                    return ow.newInstance(cl, tmArgs);
+                    return ow.newInstance(cl, tmArgs, NonTemplateCallPlace.INSTANCE);
                 } catch (Exception e) {
                     throw new _ObjectBuilderSettingEvaluationException(
                             "Failed to call " + cl.getName() + " constructor", e);

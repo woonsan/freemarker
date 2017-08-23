@@ -25,14 +25,13 @@ import java.util.Iterator;
 import org.apache.freemarker.core.model.ObjectWrapper;
 import org.apache.freemarker.core.model.TemplateCollectionModelEx;
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateModelException;
 import org.apache.freemarker.core.model.TemplateModelIterator;
 import org.apache.freemarker.core.model.impl.DefaultNonListCollectionAdapter;
-import org.apache.freemarker.core.model.impl.SimpleScalar;
+import org.apache.freemarker.core.model.impl.SimpleString;
 
 /**
  * Adapts (not copies) a {@link Collection} of {@link String}-s with on-the-fly wrapping of the items to {@link
- * SimpleScalar}-s. The important difference to {@link DefaultNonListCollectionAdapter} is that it doesn't depend on an
+ * SimpleString}-s. The important difference to {@link DefaultNonListCollectionAdapter} is that it doesn't depend on an
  * {@link ObjectWrapper}, which is needed to guarantee the behavior of some template language constructs. The important
  * difference to {@link NativeCollectionEx} is that it doesn't need upfront conversion to {@link TemplateModel}-s
  * (performance).
@@ -56,18 +55,18 @@ class NativeStringCollectionCollectionEx implements TemplateCollectionModelEx {
     }
 
     @Override
-    public TemplateModelIterator iterator() throws TemplateModelException {
+    public TemplateModelIterator iterator() throws TemplateException {
         return new TemplateModelIterator() {
 
             private final Iterator<String> iterator = collection.iterator();
 
             @Override
-            public TemplateModel next() throws TemplateModelException {
+            public TemplateModel next() throws TemplateException {
                 if (!iterator.hasNext()) {
-                    throw new TemplateModelException("The collection has no more items.");
+                    throw new TemplateException("The collection has no more items.");
                 }
 
-                return new SimpleScalar(iterator.next());
+                return new SimpleString(iterator.next());
             }
 
             @Override

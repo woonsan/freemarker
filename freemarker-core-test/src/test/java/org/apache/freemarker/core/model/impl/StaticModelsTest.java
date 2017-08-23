@@ -22,14 +22,13 @@ package org.apache.freemarker.core.model.impl;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
-import java.util.ArrayList;
-
 import org.apache.freemarker.core.Configuration;
+import org.apache.freemarker.core.NonTemplateCallPlace;
+import org.apache.freemarker.core.TemplateException;
 import org.apache.freemarker.core.model.TemplateHashModel;
-import org.apache.freemarker.core.model.TemplateMethodModelEx;
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateModelException;
-import org.apache.freemarker.core.model.TemplateScalarModel;
+import org.apache.freemarker.core.model.TemplateStringModel;
+import org.apache.freemarker.core.util.CallableUtils;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -49,24 +48,26 @@ public class StaticModelsTest {
         try {
             s.get("x");
             fail();
-        } catch (TemplateModelException e) {
+        } catch (TemplateException e) {
             assertThat(e.getMessage(), containsString("No such key"));
         }
         
         try {
             statics.get("no.such.ClassExists");
             fail();
-        } catch (TemplateModelException e) {
+        } catch (TemplateException e) {
             assertTrue(e.getCause() instanceof ClassNotFoundException);
         }
         
         TemplateModel f = s.get("F");
-        assertTrue(f instanceof TemplateScalarModel);
-        assertEquals(((TemplateScalarModel) f).getAsString(), "F OK");
+        assertTrue(f instanceof TemplateStringModel);
+        assertEquals(((TemplateStringModel) f).getAsString(), "F OK");
         
         TemplateModel m = s.get("m");
-        assertTrue(m instanceof TemplateMethodModelEx);
-        assertEquals(((TemplateScalarModel) ((TemplateMethodModelEx) m).exec(new ArrayList())).getAsString(), "m OK");
+        assertTrue(m instanceof JavaMethodModel);
+        assertEquals(((TemplateStringModel) ((JavaMethodModel) m).execute(
+                CallableUtils.EMPTY_TEMPLATE_MODEL_ARRAY, NonTemplateCallPlace.INSTANCE)).getAsString(),
+                "m OK");
         
         assertSame(s, statics.get(S.class.getName()));
         

@@ -27,7 +27,6 @@ import java.util.ListIterator;
 import org.apache.freemarker.core.model.TemplateCollectionModel;
 import org.apache.freemarker.core.model.TemplateHashModelEx2;
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateModelException;
 import org.apache.freemarker.core.model.TemplateModelIterator;
 import org.apache.freemarker.core.model.impl.CollectionAndSequence;
 
@@ -49,7 +48,7 @@ final class ASTExpHashLiteral extends ASTExpression {
 
     @Override
     TemplateModel _eval(Environment env) throws TemplateException {
-        return new SequenceHash(env);
+        return new LinkedHash(env);
     }
 
     @Override
@@ -106,12 +105,12 @@ final class ASTExpHashLiteral extends ASTExpression {
     	return new ASTExpHashLiteral(clonedKeys, clonedValues);
     }
 
-    private class SequenceHash implements TemplateHashModelEx2 {
+    private class LinkedHash implements TemplateHashModelEx2 {
 
         private HashMap<String, TemplateModel> map;
         private TemplateCollectionModel keyCollection, valueCollection; // ordered lists of keys and values
 
-        SequenceHash(Environment env) throws TemplateException {
+        LinkedHash(Environment env) throws TemplateException {
             map = new LinkedHashMap<>();
             for (int i = 0; i < size; i++) {
                 ASTExpression keyExp = (ASTExpression) keys.get(i);
@@ -160,29 +159,29 @@ final class ASTExpHashLiteral extends ASTExpression {
         }
 
         @Override
-        public KeyValuePairIterator keyValuePairIterator() throws TemplateModelException {
+        public KeyValuePairIterator keyValuePairIterator() throws TemplateException {
             return new KeyValuePairIterator() {
                 private final TemplateModelIterator keyIterator = keys().iterator();
                 private final TemplateModelIterator valueIterator = values().iterator();
 
                 @Override
-                public boolean hasNext() throws TemplateModelException {
+                public boolean hasNext() throws TemplateException {
                     return keyIterator.hasNext();
                 }
 
                 @Override
-                public KeyValuePair next() throws TemplateModelException {
+                public KeyValuePair next() throws TemplateException {
                     return new KeyValuePair() {
                         private final TemplateModel key = keyIterator.next();
                         private final TemplateModel value = valueIterator.next();
 
                         @Override
-                        public TemplateModel getKey() throws TemplateModelException {
+                        public TemplateModel getKey() throws TemplateException {
                             return key;
                         }
 
                         @Override
-                        public TemplateModel getValue() throws TemplateModelException {
+                        public TemplateModel getValue() throws TemplateException {
                             return value;
                         }
                         

@@ -24,7 +24,7 @@ import java.io.IOException;
 import org.apache.freemarker.core.model.TemplateHashModel;
 import org.apache.freemarker.core.model.TemplateModel;
 import org.apache.freemarker.core.model.TemplateNodeModel;
-import org.apache.freemarker.core.model.TemplateScalarModel;
+import org.apache.freemarker.core.model.TemplateStringModel;
 import org.apache.freemarker.core.model.TemplateSequenceModel;
 
 
@@ -44,12 +44,13 @@ final class ASTDirRecurse extends ASTDirective {
     ASTElement[] accept(Environment env) throws IOException, TemplateException {
         TemplateModel node = targetNode == null ? null : targetNode.eval(env);
         if (node != null && !(node instanceof TemplateNodeModel)) {
-            throw new NonNodeException(targetNode, node, "node", env);
+            throw MessageUtils.newUnexpectedOperandTypeException(
+                    targetNode, node, TemplateNodeModel.class, env);
         }
         
         TemplateModel nss = namespaces == null ? null : namespaces.eval(env);
         if (namespaces instanceof ASTExpStringLiteral) {
-            nss = env.importLib(((TemplateScalarModel) nss).getAsString(), null);
+            nss = env.importLib(((TemplateStringModel) nss).getAsString(), null);
         } else if (namespaces instanceof ASTExpListLiteral) {
             nss = ((ASTExpListLiteral) namespaces).evaluateStringsToNamespaces(env);
         }
@@ -60,10 +61,11 @@ final class ASTDirRecurse extends ASTDirective {
                 nss = ss;
             } else if (!(nss instanceof TemplateSequenceModel)) {
                 if (namespaces != null) {
-                    throw new NonSequenceException(namespaces, nss, env);
+                    throw MessageUtils.newUnexpectedOperandTypeException(
+                            namespaces, nss, TemplateSequenceModel.class, env);
                 } else {
                     // Should not occur
-                    throw new _MiscTemplateException(env, "Expecting a sequence of namespaces after \"using\"");
+                    throw new TemplateException(env, "Expecting a sequence of namespaces after \"using\"");
                 }
             }
         }

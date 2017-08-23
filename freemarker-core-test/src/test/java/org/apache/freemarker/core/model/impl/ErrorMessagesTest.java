@@ -22,14 +22,14 @@ package org.apache.freemarker.core.model.impl;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
-import java.util.Collections;
 import java.util.Date;
 
 import org.apache.freemarker.core.Configuration;
+import org.apache.freemarker.core.NonTemplateCallPlace;
+import org.apache.freemarker.core.TemplateException;
 import org.apache.freemarker.core.model.TemplateHashModel;
-import org.apache.freemarker.core.model.TemplateMethodModelEx;
-import org.apache.freemarker.core.model.TemplateModelException;
-import org.apache.freemarker.core.model.TemplateScalarModel;
+import org.apache.freemarker.core.model.TemplateModel;
+import org.apache.freemarker.core.model.TemplateStringModel;
 import org.apache.freemarker.core.outputformat.impl.HTMLOutputFormat;
 import org.apache.freemarker.core.outputformat.impl.TemplateHTMLOutputModel;
 import org.junit.Test;
@@ -37,13 +37,13 @@ import org.junit.Test;
 public class ErrorMessagesTest {
 
     @Test
-    public void getterMessage() throws TemplateModelException {
+    public void getterMessage() throws TemplateException {
         DefaultObjectWrapper ow = new DefaultObjectWrapper.Builder(Configuration.VERSION_3_0_0).build();
         TemplateHashModel thm= (TemplateHashModel) ow.wrap(new TestBean());
         
         try {
             thm.get("foo");
-        } catch (TemplateModelException e) {
+        } catch (TemplateException e) {
             e.printStackTrace();
             final String msg = e.getMessage();
             assertThat(msg, containsString("\"foo\""));
@@ -60,11 +60,11 @@ public class ErrorMessagesTest {
         TemplateHashModel thm = (TemplateHashModel) ow.wrap(new TestBean());
         
         {
-            TemplateMethodModelEx m = (TemplateMethodModelEx) thm.get("m1");
+            JavaMethodModel m = (JavaMethodModel) thm.get("m1");
             try {
-                m.exec(Collections.singletonList(html));
+                m.execute(new TemplateModel[] { html }, NonTemplateCallPlace.INSTANCE);
                 fail();
-            } catch (TemplateModelException e) {
+            } catch (TemplateException e) {
                 assertThat(e.getMessage(), allOf(
                         containsString("String"), containsString("convert"), containsString("markupOutput"),
                         containsString("Tip:"), containsString("?markupString")));
@@ -72,11 +72,11 @@ public class ErrorMessagesTest {
         }
         
         {
-            TemplateMethodModelEx m = (TemplateMethodModelEx) thm.get("m2");
+            JavaMethodModel m = (JavaMethodModel) thm.get("m2");
             try {
-                m.exec(Collections.singletonList(html));
+                m.execute(new TemplateModel[] { html }, NonTemplateCallPlace.INSTANCE);
                 fail();
-            } catch (TemplateModelException e) {
+            } catch (TemplateException e) {
                 assertThat(e.getMessage(), allOf(
                         containsString("Date"), containsString("convert"), containsString("markupOutput"),
                         not(containsString("?markupString"))));
@@ -84,11 +84,11 @@ public class ErrorMessagesTest {
         }
         
         for (String methodName : new String[] { "mOverloaded", "mOverloaded3" }) {
-            TemplateMethodModelEx m = (TemplateMethodModelEx) thm.get(methodName);
+            JavaMethodModel m = (JavaMethodModel)thm.get(methodName);
             try {
-                m.exec(Collections.singletonList(html));
+                m.execute(new TemplateModel[] { html }, NonTemplateCallPlace.INSTANCE);
                 fail();
-            } catch (TemplateModelException e) {
+            } catch (TemplateException e) {
                 assertThat(e.getMessage(), allOf(
                         containsString("No compatible overloaded"),
                         containsString("String"), containsString("markupOutput"),
@@ -97,11 +97,11 @@ public class ErrorMessagesTest {
         }
         
         {
-            TemplateMethodModelEx m = (TemplateMethodModelEx) thm.get("mOverloaded2");
+            JavaMethodModel m = (JavaMethodModel)thm.get("mOverloaded2");
             try {
-                m.exec(Collections.singletonList(html));
+                m.execute(new TemplateModel[] { html }, NonTemplateCallPlace.INSTANCE);
                 fail();
-            } catch (TemplateModelException e) {
+            } catch (TemplateException e) {
                 assertThat(e.getMessage(), allOf(
                         containsString("No compatible overloaded"),
                         containsString("Integer"), containsString("markupOutput"),
@@ -110,10 +110,10 @@ public class ErrorMessagesTest {
         }
         
         {
-            TemplateMethodModelEx m = (TemplateMethodModelEx) thm.get("mOverloaded4");
-            Object r = m.exec(Collections.singletonList(html));
-            if (r instanceof TemplateScalarModel) {
-                r = ((TemplateScalarModel) r).getAsString();
+            JavaMethodModel m = (JavaMethodModel)thm.get("mOverloaded4");
+            Object r = m.execute(new TemplateModel[] { html }, NonTemplateCallPlace.INSTANCE);
+            if (r instanceof TemplateStringModel) {
+                r = ((TemplateStringModel) r).getAsString();
             }
             assertEquals("<p>a", r);
         }
@@ -161,7 +161,7 @@ public class ErrorMessagesTest {
             return s;
         }
 
-        public String mOverloaded4(TemplateHTMLOutputModel s) throws TemplateModelException {
+        public String mOverloaded4(TemplateHTMLOutputModel s) throws TemplateException {
             return s.getOutputFormat().getMarkupString(s);
         }
         

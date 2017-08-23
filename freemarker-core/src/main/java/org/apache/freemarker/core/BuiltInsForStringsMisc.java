@@ -22,17 +22,15 @@ package org.apache.freemarker.core;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.Writer;
-import java.util.List;
-import java.util.Map;
 
+import org.apache.freemarker.core.model.ArgumentArrayLayout;
 import org.apache.freemarker.core.model.ObjectWrapper;
 import org.apache.freemarker.core.model.TemplateBooleanModel;
-import org.apache.freemarker.core.model.TemplateMethodModelEx;
+import org.apache.freemarker.core.model.TemplateDirectiveModel;
+import org.apache.freemarker.core.model.TemplateFunctionModel;
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateModelException;
-import org.apache.freemarker.core.model.TemplateScalarModel;
+import org.apache.freemarker.core.model.TemplateStringModel;
 import org.apache.freemarker.core.model.TemplateSequenceModel;
-import org.apache.freemarker.core.model.TemplateTransformModel;
 import org.apache.freemarker.core.model.impl.BeanModel;
 import org.apache.freemarker.core.model.impl.DefaultObjectWrapper;
 import org.apache.freemarker.core.model.impl.SimpleNumber;
@@ -46,16 +44,16 @@ class BuiltInsForStringsMisc {
         @Override
         TemplateModel calculateResult(String s, Environment env)  throws TemplateException {
             final boolean b;
-            if (s.equals(MiscUtil.C_TRUE)) {
+            if (s.equals(TemplateBooleanFormat.C_TRUE)) {
                 b = true;
-            } else if (s.equals(MiscUtil.C_FALSE)) {
+            } else if (s.equals(TemplateBooleanFormat.C_FALSE)) {
                 b = false;
             } else if (s.equals(env.getTemplateBooleanFormat().getTrueStringValue())) {
                 b = true;
             } else if (s.equals(env.getTemplateBooleanFormat().getFalseStringValue())) {
                 b = false;
             } else {
-                throw new _MiscTemplateException(this, env,
+                throw new TemplateException(this, env,
                         "Can't convert this string to boolean: ", new _DelayedJQuote(s));
             }
             return b ? TemplateBooleanModel.TRUE : TemplateBooleanModel.FALSE;
@@ -72,7 +70,7 @@ class BuiltInsForStringsMisc {
         TemplateModel calculateResult(String s, Environment env) throws TemplateException {
             Template parentTemplate = getTemplate();
             
-            ASTExpression exp = null;
+            ASTExpression exp;
             try {
                 try {
                     ParsingConfiguration pCfg = parentTemplate.getParsingConfiguration();
@@ -97,21 +95,21 @@ class BuiltInsForStringsMisc {
                     throw e.toParseException(parentTemplate);
                 }
             } catch (ParseException e) {
-                throw new _MiscTemplateException(this, env,
+                throw new TemplateException(this, env,
                         "Failed to \"?", key, "\" string with this error:\n\n",
-                        MessageUtil.EMBEDDED_MESSAGE_BEGIN,
+                        MessageUtils.EMBEDDED_MESSAGE_BEGIN,
                         new _DelayedGetMessage(e),
-                        MessageUtil.EMBEDDED_MESSAGE_END,
+                        MessageUtils.EMBEDDED_MESSAGE_END,
                         "\n\nThe failing expression:");
             }
             try {
                 return exp.eval(env);
             } catch (TemplateException e) {
-                throw new _MiscTemplateException(this, env,
+                throw new TemplateException(this, env,
                         "Failed to \"?", key, "\" string with this error:\n\n",
-                        MessageUtil.EMBEDDED_MESSAGE_BEGIN,
+                        MessageUtils.EMBEDDED_MESSAGE_BEGIN,
                         new _DelayedGetMessageWithoutStackTop(e),
-                        MessageUtil.EMBEDDED_MESSAGE_END,
+                        MessageUtils.EMBEDDED_MESSAGE_END,
                         "\n\nThe failing expression:");
             }
         }
@@ -119,8 +117,8 @@ class BuiltInsForStringsMisc {
     }
     
     /**
-     * A method that takes a parameter and evaluates it as a scalar,
-     * then treats that scalar as template source code and returns a
+     * A method that takes a parameter and evaluates it as a string,
+     * then treats that string as template source code and returns a
      * transform model that evaluates the template in place.
      * The template inherits the configuration and environment of the executing
      * template. By default, its name will be equal to 
@@ -132,16 +130,16 @@ class BuiltInsForStringsMisc {
         
         /**
          * Constructs a template on-the-fly and returns it embedded in a
-         * {@link TemplateTransformModel}.
+         * {@link TemplateDirectiveModel}.
          * 
          * <p>The built-in has two arguments:
          * the arguments passed to the method. It can receive at
-         * least one and at most two arguments, both must evaluate to a scalar. 
-         * The first scalar is interpreted as a template source code and a template
+         * least one and at most two arguments, both must evaluate to a string.
+         * The first string is interpreted as a template source code and a template
          * is built from it. The second (optional) is used to give the generated
          * template a name.
          * 
-         * @return a {@link TemplateTransformModel} that when executed inside
+         * @return a {@link TemplateDirectiveModel} that when executed inside
          * a <tt>&lt;transform></tt> block will process the generated template
          * just as if it had been <tt>&lt;transform></tt>-ed at that point.
          */
@@ -151,17 +149,19 @@ class BuiltInsForStringsMisc {
             ASTExpression sourceExpr = null;
             String id = "anonymous_interpreted";
             if (model instanceof TemplateSequenceModel) {
-                sourceExpr = ((ASTExpression) new ASTExpDynamicKeyName(target, new ASTExpNumberLiteral(Integer.valueOf(0))).copyLocationFrom(target));
+                sourceExpr = ((ASTExpression) new ASTExpDynamicKeyName(target, new ASTExpNumberLiteral(0))
+                        .copyLocationFrom(target));
                 if (((TemplateSequenceModel) model).size() > 1) {
-                    id = ((ASTExpression) new ASTExpDynamicKeyName(target, new ASTExpNumberLiteral(Integer.valueOf(1))).copyLocationFrom(target)).evalAndCoerceToPlainText(env);
+                    id = ((ASTExpression) new ASTExpDynamicKeyName(target, new ASTExpNumberLiteral(1))
+                            .copyLocationFrom(target)).evalAndCoerceToPlainText(env);
                 }
-            } else if (model instanceof TemplateScalarModel) {
+            } else if (model instanceof TemplateStringModel) {
                 sourceExpr = target;
             } else {
-                throw new UnexpectedTypeException(
+                throw MessageUtils.newUnexpectedOperandTypeException(
                         target, model,
-                        "sequence or string", new Class[] { TemplateSequenceModel.class, TemplateScalarModel.class },
-                        env);
+                        "sequence or string", new Class[] { TemplateSequenceModel.class, TemplateStringModel.class },
+                        null, env);
             }
             String templateSource = sourceExpr.evalAndCoerceToPlainText(env);
             Template parentTemplate = env.getCurrentTemplate();
@@ -178,30 +178,28 @@ class BuiltInsForStringsMisc {
                         outputFormat, autoEscapingPolicy,
                         null, null);
             } catch (IOException e) {
-                throw new _MiscTemplateException(this, e, env,
+                throw new TemplateException(this, e, env,
                         "Template parsing with \"?", key, "\" has failed with this error:\n\n",
-                        MessageUtil.EMBEDDED_MESSAGE_BEGIN,
+                        MessageUtils.EMBEDDED_MESSAGE_BEGIN,
                         new _DelayedGetMessage(e),
-                        MessageUtil.EMBEDDED_MESSAGE_END,
+                        MessageUtils.EMBEDDED_MESSAGE_END,
                         "\n\nThe failed expression:");
             }
             
             return new TemplateProcessorModel(interpretedTemplate);
         }
 
-        private class TemplateProcessorModel
-        implements
-            TemplateTransformModel {
+        private class TemplateProcessorModel implements TemplateDirectiveModel {
             private final Template template;
             
             TemplateProcessorModel(Template template) {
                 this.template = template;
             }
-            
+
             @Override
-            public Writer getWriter(final Writer out, Map args) throws TemplateModelException, IOException {
+            public void execute(TemplateModel[] args, CallPlace callPlace, Writer out, Environment env)
+                    throws TemplateException, IOException {
                 try {
-                    Environment env = Environment.getCurrentEnvironment();
                     boolean lastFIRE = env.setFastInvalidReferenceExceptions(false);
                     try {
                         env.include(template);
@@ -209,29 +207,23 @@ class BuiltInsForStringsMisc {
                         env.setFastInvalidReferenceExceptions(lastFIRE);
                     }
                 } catch (Exception e) {
-                    throw new _TemplateModelException(e,
+                    throw new TemplateException(e,
                             "Template created with \"?", key, "\" has stopped with this error:\n\n",
-                            MessageUtil.EMBEDDED_MESSAGE_BEGIN,
+                            MessageUtils.EMBEDDED_MESSAGE_BEGIN,
                             new _DelayedGetMessage(e),
-                            MessageUtil.EMBEDDED_MESSAGE_END);
+                            MessageUtils.EMBEDDED_MESSAGE_END);
                 }
-        
-                return new Writer(out)
-                {
-                    @Override
-                    public void close() {
-                    }
-                    
-                    @Override
-                    public void flush() throws IOException {
-                        out.flush();
-                    }
-                    
-                    @Override
-                    public void write(char[] cbuf, int off, int len) throws IOException {
-                        out.write(cbuf, off, len);
-                    }
-                };
+                callPlace.executeNestedContent(null, out, env);
+            }
+
+            @Override
+            public ArgumentArrayLayout getDirectiveArgumentArrayLayout() {
+                return ArgumentArrayLayout.PARAMETERLESS;
+            }
+
+            @Override
+            public boolean isNestedContentSupported() {
+                return false;
             }
         }
 
@@ -243,7 +235,10 @@ class BuiltInsForStringsMisc {
             try {
                 return new SimpleNumber(env.getArithmeticEngine().toNumber(s));
             } catch (NumberFormatException nfe) {
-                throw NonNumericalException.newMalformedNumberException(this, s, env);
+                throw new TemplateException(
+                        new _ErrorDescriptionBuilder(
+                                "Can't convert this string to number: ", new _DelayedJQuote(s))
+                        .blame(this));
             }
         }
     }
@@ -260,45 +255,52 @@ class BuiltInsForStringsMisc {
             return new ConstructorFunction(target.evalAndCoerceToPlainText(env), env, target.getTemplate());
         }
 
-        class ConstructorFunction implements TemplateMethodModelEx {
+        class ConstructorFunction extends BuiltInCallableImpl implements TemplateFunctionModel {
 
             private final Class<?> cl;
             private final Environment env;
             
-            public ConstructorFunction(String classname, Environment env, Template template) throws TemplateException {
+            ConstructorFunction(String classname, Environment env, Template template) throws TemplateException {
                 this.env = env;
                 cl = env.getNewBuiltinClassResolver().resolve(classname, env, template);
                 if (!TemplateModel.class.isAssignableFrom(cl)) {
-                    throw new _MiscTemplateException(newBI.this, env,
+                    throw new TemplateException(newBI.this, env,
                             "Class ", cl.getName(), " does not implement org.apache.freemarker.core.TemplateModel");
                 }
                 if (BeanModel.class.isAssignableFrom(cl)) {
-                    throw new _MiscTemplateException(newBI.this, env,
+                    throw new TemplateException(newBI.this, env,
                             "Bean Models cannot be instantiated using the ?", key, " built-in");
                 }
             }
 
             @Override
-            public Object exec(List arguments) throws TemplateModelException {
+            public TemplateModel execute(TemplateModel[] args, CallPlace callPlace, Environment env)
+                    throws TemplateException {
                 ObjectWrapper ow = env.getObjectWrapper();
                 if (ow instanceof DefaultObjectWrapper) {
-                    return ((DefaultObjectWrapper) ow).newInstance(cl, arguments);
+                    return ow.wrap(((DefaultObjectWrapper) ow).newInstance(cl, args, callPlace));
                 }
 
-                if (!arguments.isEmpty()) {
-                    throw new TemplateModelException(
+                if (args.length != 0) {
+                    throw new TemplateException(
                             "className?new(args) only supports 0 arguments in the current configuration, because "
                             + " the objectWrapper setting value is not a "
                             + DefaultObjectWrapper.class.getName() +
                             " (or its subclass).");
                 }
                 try {
-                    return cl.newInstance();
+                    return ow.wrap(cl.newInstance());
                 } catch (Exception e) {
-                    throw new TemplateModelException("Failed to instantiate "
+                    throw new TemplateException("Failed to instantiate "
                             + cl.getName() + " with its parameterless constructor; see cause exception", e);
                 }
             }
+
+            @Override
+            public ArgumentArrayLayout getFunctionArgumentArrayLayout() {
+                return null;
+            }
+
         }
     }
     

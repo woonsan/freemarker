@@ -21,14 +21,14 @@ package org.apache.freemarker.core.outputformat.impl;
 import java.io.IOException;
 import java.io.Writer;
 
-import org.apache.freemarker.core.model.TemplateModelException;
+import org.apache.freemarker.core.TemplateException;
 import org.apache.freemarker.core.outputformat.CommonMarkupOutputFormat;
 import org.apache.freemarker.core.outputformat.OutputFormat;
-import org.apache.freemarker.core.util._StringUtil;
+import org.apache.freemarker.core.util._StringUtils;
 
 /**
  * Represents the HTML output format (MIME type "text/html", name "HTML"). This format escapes by default (via
- * {@link _StringUtil#XHTMLEnc(String)}). The {@code ?html}, {@code ?xhtml} and {@code ?xml} built-ins silently bypass
+ * {@link _StringUtils#XHTMLEnc(String)}). The {@code ?html}, {@code ?xhtml} and {@code ?xml} built-ins silently bypass
  * template output values of the type produced by this output format ({@link TemplateHTMLOutputModel}).
  */
 public final class HTMLOutputFormat extends CommonMarkupOutputFormat<TemplateHTMLOutputModel> {
@@ -53,13 +53,13 @@ public final class HTMLOutputFormat extends CommonMarkupOutputFormat<TemplateHTM
     }
 
     @Override
-    public void output(String textToEsc, Writer out) throws IOException, TemplateModelException {
-        _StringUtil.XHTMLEnc(textToEsc, out);
+    public void output(String textToEsc, Writer out) throws IOException, TemplateException {
+        _StringUtils.XHTMLEnc(textToEsc, out);
     }
 
     @Override
     public String escapePlainText(String plainTextContent) {
-        return _StringUtil.XHTMLEnc(plainTextContent);
+        return _StringUtils.XHTMLEnc(plainTextContent);
     }
 
     @Override

@@ -19,20 +19,21 @@
 
 package org.apache.freemarker.core;
 
+import static org.apache.freemarker.core.util.CallableUtils.*;
+
 import java.util.Date;
-import java.util.List;
 import java.util.TimeZone;
 
 import org.apache.freemarker.core.model.AdapterTemplateModel;
+import org.apache.freemarker.core.model.ArgumentArrayLayout;
 import org.apache.freemarker.core.model.TemplateDateModel;
-import org.apache.freemarker.core.model.TemplateMethodModelEx;
+import org.apache.freemarker.core.model.TemplateFunctionModel;
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateModelException;
-import org.apache.freemarker.core.model.TemplateScalarModel;
+import org.apache.freemarker.core.model.TemplateStringModel;
 import org.apache.freemarker.core.model.impl.SimpleDate;
-import org.apache.freemarker.core.model.impl.SimpleScalar;
+import org.apache.freemarker.core.model.impl.SimpleString;
 import org.apache.freemarker.core.util.UnrecognizedTimeZoneException;
-import org.apache.freemarker.core.util._DateUtil;
+import org.apache.freemarker.core.util._DateUtils;
 
 /**
  * A holder for built-ins that operate exclusively on date left-hand values.
@@ -57,17 +58,12 @@ class BuiltInsForDates {
                 if (tdmDateType != TemplateDateModel.UNKNOWN) {
                     return tdm;
                 }
-                return new SimpleDate(_EvalUtil.modelToDate(tdm, target), dateType);
+                return new SimpleDate(_EvalUtils.modelToDate(tdm, target), dateType);
             } else {
-                throw BuiltInForDate.newNonDateException(env, model, target);
+                throw MessageUtils.newUnexpectedOperandTypeException(target, model, TemplateDateModel.class, env);
             }
         }
 
-        protected TemplateModel calculateResult(Date date, int dateType, Environment env) throws TemplateException {
-            // TODO Auto-generated method stub
-            return null;
-        }
-        
     }
     
     /**
@@ -75,7 +71,7 @@ class BuiltInsForDates {
      */
     static class iso_BI extends AbstractISOBI {
         
-        class Result implements TemplateMethodModelEx {
+        class Result extends BuiltInCallableImpl implements TemplateFunctionModel {
             private final Date date;
             private final int dateType;
             private final Environment env;
@@ -87,43 +83,48 @@ class BuiltInsForDates {
             }
 
             @Override
-            public Object exec(List args) throws TemplateModelException {
-                checkMethodArgCount(args, 1);
-                
-                TemplateModel tzArgTM = (TemplateModel) args.get(0);
-                TimeZone tzArg; 
+            public TemplateModel execute(TemplateModel[] args, CallPlace callPlace, Environment env)
+                    throws TemplateException {
+                TemplateModel tzArgTM = args[0];
+                TimeZone tzArg;
                 Object adaptedObj;
                 if (tzArgTM instanceof AdapterTemplateModel
                         && (adaptedObj =
                                 ((AdapterTemplateModel) tzArgTM)
                                 .getAdaptedObject(TimeZone.class))
                             instanceof TimeZone) {
-                    tzArg = (TimeZone) adaptedObj;                    
-                } else if (tzArgTM instanceof TemplateScalarModel) {
-                    String tzName = _EvalUtil.modelToString((TemplateScalarModel) tzArgTM, null, null);
+                    tzArg = (TimeZone) adaptedObj;
+                } else if (tzArgTM instanceof TemplateStringModel) {
+                    String tzName = _EvalUtils.modelToString((TemplateStringModel) tzArgTM, null);
                     try {
-                        tzArg = _DateUtil.getTimeZone(tzName);
+                        tzArg = _DateUtils.getTimeZone(tzName);
                     } catch (UnrecognizedTimeZoneException e) {
-                        throw new _TemplateModelException(
-                                "The time zone string specified for ?", key,
-                                "(...) is not recognized as a valid time zone name: ",
-                                new _DelayedJQuote(tzName));
+                        throw newArgumentValueException(0,
+                                "not recognized as a valid time zone name: " + new _DelayedJQuote(tzName),
+                                this, true);
                     }
                 } else {
-                    throw MessageUtil.newMethodArgUnexpectedTypeException(
-                            "?" + key, 0, "string or java.util.TimeZone", tzArgTM);
+                    throw newArgumentValueTypeException(
+                            tzArgTM, 0,
+                            new Class[] { TemplateStringModel.class }, "string or java.util.TimeZone",
+                            this, true);
                 }
-                
-                return new SimpleScalar(_DateUtil.dateToISO8601String(
+
+                return new SimpleString(_DateUtils.dateToISO8601String(
                         date,
                         dateType != TemplateDateModel.TIME,
                         dateType != TemplateDateModel.DATE,
                         shouldShowOffset(date, dateType, env),
                         accuracy,
-                        tzArg, 
+                        tzArg,
                         env.getISOBuiltInCalendarFactory()));
             }
-            
+
+            @Override
+            public ArgumentArrayLayout getFunctionArgumentArrayLayout() {
+                return ArgumentArrayLayout.SINGLE_POSITIONAL_PARAMETER;
+            }
+
         }
 
         iso_BI(Boolean showOffset, int accuracy) {
@@ -158,14 +159,14 @@ class BuiltInsForDates {
                 Date date, int dateType, Environment env)
         throws TemplateException {
             checkDateTypeNotUnknown(dateType);
-            return new SimpleScalar(_DateUtil.dateToISO8601String(
+            return new SimpleString(_DateUtils.dateToISO8601String(
                     date,
                     dateType != TemplateDateModel.TIME,
                     dateType != TemplateDateModel.DATE,
                     shouldShowOffset(date, dateType, env),
                     accuracy,
                     useUTC
-                            ? _DateUtil.UTC
+                            ? _DateUtils.UTC
                             : env.shouldUseSQLDTTZ(date.getClass())
                                     ? env.getSQLDateAndTimeTimeZone()
                                     : env.getTimeZone(),
@@ -178,29 +179,29 @@ class BuiltInsForDates {
     private BuiltInsForDates() { }
 
     static abstract class AbstractISOBI extends BuiltInForDate {
-        protected final Boolean showOffset;
-        protected final int accuracy;
+        final Boolean showOffset;
+        final int accuracy;
     
-        protected AbstractISOBI(Boolean showOffset, int accuracy) {
+        AbstractISOBI(Boolean showOffset, int accuracy) {
             this.showOffset = showOffset;
             this.accuracy = accuracy;
         }
         
-        protected void checkDateTypeNotUnknown(int dateType)
+        void checkDateTypeNotUnknown(int dateType)
         throws TemplateException {
             if (dateType == TemplateDateModel.UNKNOWN) {
-                throw new _MiscTemplateException(new _ErrorDescriptionBuilder(
+                throw new TemplateException(new _ErrorDescriptionBuilder(
                             "The value of the following has unknown date type, but ?", key,
                             " needs a value where it's known if it's a date (no time part), time, or date-time value:"                        
-                        ).blame(target).tip(MessageUtil.UNKNOWN_DATE_TYPE_ERROR_TIP));
+                        ).blame(target).tip(MessageUtils.UNKNOWN_DATE_TYPE_ERROR_TIP));
             }
         }
     
-        protected boolean shouldShowOffset(Date date, int dateType, Environment env) {
+        boolean shouldShowOffset(Date date, int dateType, Environment env) {
             if (dateType == TemplateDateModel.DATE) {
                 return false;  // ISO 8061 doesn't allow zone for date-only values
             } else if (showOffset != null) {
-                return showOffset.booleanValue();
+                return showOffset;
             } else {
                 // java.sql.Time values meant to carry calendar field values only, so we don't show offset for them.
                 return !(date instanceof java.sql.Time);

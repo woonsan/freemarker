@@ -19,17 +19,18 @@
 
 package org.apache.freemarker.core;
 
+import static org.apache.freemarker.core.util.CallableUtils.*;
+
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.UnsupportedCharsetException;
-import java.util.List;
 
-import org.apache.freemarker.core.model.TemplateMethodModel;
+import org.apache.freemarker.core.model.ArgumentArrayLayout;
+import org.apache.freemarker.core.model.TemplateFunctionModel;
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateModelException;
-import org.apache.freemarker.core.model.TemplateScalarModel;
-import org.apache.freemarker.core.model.impl.SimpleScalar;
-import org.apache.freemarker.core.util._StringUtil;
+import org.apache.freemarker.core.model.TemplateStringModel;
+import org.apache.freemarker.core.model.impl.SimpleString;
+import org.apache.freemarker.core.util._StringUtils;
 
 class BuiltInsForStringsEncoding {
 
@@ -37,7 +38,7 @@ class BuiltInsForStringsEncoding {
         
         @Override
         TemplateModel calculateResult(String s, Environment env) {
-            return new SimpleScalar(_StringUtil.XHTMLEnc(s));
+            return new SimpleString(_StringUtils.XHTMLEnc(s));
         }
         
     }
@@ -45,28 +46,28 @@ class BuiltInsForStringsEncoding {
     static class j_stringBI extends BuiltInForString {
         @Override
         TemplateModel calculateResult(String s, Environment env) {
-            return new SimpleScalar(_StringUtil.javaStringEnc(s));
+            return new SimpleString(_StringUtils.javaStringEnc(s));
         }
     }
 
     static class js_stringBI extends BuiltInForString {
         @Override
         TemplateModel calculateResult(String s, Environment env) {
-            return new SimpleScalar(_StringUtil.javaScriptStringEnc(s));
+            return new SimpleString(_StringUtils.javaScriptStringEnc(s));
         }
     }
 
     static class json_stringBI extends BuiltInForString {
         @Override
         TemplateModel calculateResult(String s, Environment env) {
-            return new SimpleScalar(_StringUtil.jsonStringEnc(s));
+            return new SimpleString(_StringUtils.jsonStringEnc(s));
         }
     }
 
     static class rtfBI extends BuiltInForLegacyEscaping {
         @Override
         TemplateModel calculateResult(String s, Environment env) {
-            return new SimpleScalar(_StringUtil.RTFEnc(s));
+            return new SimpleString(_StringUtils.RTFEnc(s));
         }
     }
 
@@ -80,9 +81,9 @@ class BuiltInsForStringsEncoding {
     
             @Override
             protected String encodeWithCharset(Charset charset) throws UnsupportedEncodingException {
-                return _StringUtil.URLEnc(targetAsString, charset);
+                return _StringUtils.URLEnc(targetAsString, charset);
             }
-            
+
         }
         
         @Override
@@ -102,7 +103,7 @@ class BuiltInsForStringsEncoding {
     
             @Override
             protected String encodeWithCharset(Charset charset) throws UnsupportedEncodingException {
-                return _StringUtil.URLPathEnc(targetAsString, charset);
+                return _StringUtils.URLPathEnc(targetAsString, charset);
             }
             
         }
@@ -117,22 +118,22 @@ class BuiltInsForStringsEncoding {
     static class xhtmlBI extends BuiltInForLegacyEscaping {
         @Override
         TemplateModel calculateResult(String s, Environment env) {
-            return new SimpleScalar(_StringUtil.XHTMLEnc(s));
+            return new SimpleString(_StringUtils.XHTMLEnc(s));
         }
     }
 
     static class xmlBI extends BuiltInForLegacyEscaping {
         @Override
         TemplateModel calculateResult(String s, Environment env) {
-            return new SimpleScalar(_StringUtil.XMLEnc(s));
+            return new SimpleString(_StringUtils.XMLEnc(s));
         }
     }
 
     // Can't be instantiated
     private BuiltInsForStringsEncoding() { }
 
-    static abstract class AbstractUrlBIResult implements
-    TemplateScalarModel, TemplateMethodModel {
+    static abstract class AbstractUrlBIResult implements TemplateStringModel, TemplateFunctionModel,
+            ASTExpBuiltIn.BuiltInCallable {
         
         protected final ASTExpBuiltIn parent;
         protected final String targetAsString;
@@ -146,50 +147,63 @@ class BuiltInsForStringsEncoding {
         }
         
         protected abstract String encodeWithCharset(Charset charset) throws UnsupportedEncodingException;
-    
+
         @Override
-        public Object exec(List args) throws TemplateModelException {
-            parent.checkMethodArgCount(args.size(), 1);
+        public TemplateModel execute(TemplateModel[] args, CallPlace callPlace, Environment env)
+                throws TemplateException {
             try {
-                String charsetName = (String) args.get(0);
-                Charset charset = null;
+                String charsetName = getStringArgument(args,0, this);
+                Charset charset;
                 try {
                     charset = Charset.forName(charsetName);
                 } catch (UnsupportedCharsetException e) {
-                    throw new _TemplateModelException(e, "Wrong charset name, or charset is unsupported by the runtime "
-                            + "environment: " + _StringUtil.jQuote(charsetName));
+                    throw new TemplateException(e, "Wrong charset name, or charset is unsupported by the runtime "
+                            + "environment: " + _StringUtils.jQuote(charsetName));
                 }
-                return new SimpleScalar(encodeWithCharset(charset));
+                return new SimpleString(encodeWithCharset(charset));
             } catch (Exception e) {
-                throw new _TemplateModelException(e, "Failed to execute URL encoding.");
+                throw new TemplateException(e, "Failed to execute URL encoding.");
             }
         }
-        
+
         @Override
-        public String getAsString() throws TemplateModelException {
+        public ArgumentArrayLayout getFunctionArgumentArrayLayout() {
+            return ArgumentArrayLayout.SINGLE_POSITIONAL_PARAMETER;
+        }
+
+        @Override
+        public String getAsString() throws TemplateException {
             if (cachedResult == null) {
                 Charset charset = env.getEffectiveURLEscapingCharset();
                 if (charset == null) {
-                    throw new _TemplateModelException(
-                            "To do URL encoding, the framework that encloses "
-                            + "FreeMarker must specify the output encoding "
-                            + "or the URL encoding charset, so ask the "
-                            + "programmers to fix it. Or, as a last chance, "
-                            + "you can set the url_encoding_charset setting in "
-                            + "the template, e.g. "
-                            + "<#setting urlEscapingCharset='ISO-8859-1'>, or "
-                            + "give the charset explicitly to the buit-in, e.g. "
+                    throw new TemplateException(
+                            "To do URL encoding, the framework that encloses FreeMarker must specify the \"",
+                            Configuration.Builder.OUTPUT_ENCODING_KEY, "\" setting or the \"",
+                            Configuration.Builder.URL_ESCAPING_CHARSET_KEY,
+                            "\" setting, so ask the programmers to set them. Or, as a last chance, you can set the "
+                            + "url_encoding_charset setting in the template, e.g. <#setting ",
+                            Configuration.Builder.URL_ESCAPING_CHARSET_KEY,
+                            "='ISO-8859-1'>, or give the charset explicitly to the built-in, e.g. "
                             + "foo?url('ISO-8859-1').");
                 }
                 try {
                     cachedResult = encodeWithCharset(charset);
                 } catch (UnsupportedEncodingException e) {
-                    throw new _TemplateModelException(e, "Failed to execute URL encoding.");
+                    throw new TemplateException(e, "Failed to execute URL encoding.");
                 }
             }
             return cachedResult;
         }
-        
+
+        @Override
+        public String getBuiltInName() {
+            return parent.key;
+        }
+
+        @Override
+        public String getOriginName() {
+            return ASTExpBuiltIn.getOriginName(this);
+        }
     }
 
 }

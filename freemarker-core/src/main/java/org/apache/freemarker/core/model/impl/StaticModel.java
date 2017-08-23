@@ -26,20 +26,19 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import org.apache.freemarker.core.TemplateException;
 import org.apache.freemarker.core.model.TemplateCollectionModel;
+import org.apache.freemarker.core.model.TemplateFunctionModel;
 import org.apache.freemarker.core.model.TemplateHashModelEx;
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateModelException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Wraps the static fields and methods of a class in a
- * {@link org.apache.freemarker.core.model.TemplateHashModel}.
- * Fields are wrapped using {@link DefaultObjectWrapper#wrap(Object)}, and
- * methods are wrapped into an appropriate {@link org.apache.freemarker.core.model.TemplateMethodModelEx} instance.
- * Unfortunately, there is currently no support for bean property-style
- * calls of static methods, similar to that in {@link BeanModel}.
+ * Wraps the static fields and methods of a class in a {@link org.apache.freemarker.core.model.TemplateHashModel}.
+ * Fields are wrapped using {@link DefaultObjectWrapper#wrap(Object)}, and methods are wrapped into an appropriate
+ * {@link TemplateFunctionModel} instance. There is currently no support for bean property-style calls of static
+ * methods, similar to that in {@link BeanModel} (as it's not part for the JavaBeans specification).
  */
 final class StaticModel implements TemplateHashModelEx {
     
@@ -49,7 +48,7 @@ final class StaticModel implements TemplateHashModelEx {
     private final DefaultObjectWrapper wrapper;
     private final Map map = new HashMap();
 
-    StaticModel(Class clazz, DefaultObjectWrapper wrapper) throws TemplateModelException {
+    StaticModel(Class clazz, DefaultObjectWrapper wrapper) throws TemplateException {
         this.clazz = clazz;
         this.wrapper = wrapper;
         populate();
@@ -60,7 +59,7 @@ final class StaticModel implements TemplateHashModelEx {
      * parameter.
      */
     @Override
-    public TemplateModel get(String key) throws TemplateModelException {
+    public TemplateModel get(String key) throws TemplateException {
         Object model = map.get(key);
         // Simple method, overloaded method or final field -- these have cached 
         // template models
@@ -71,12 +70,12 @@ final class StaticModel implements TemplateHashModelEx {
             try {
                 return wrapper.getOuterIdentity().wrap(((Field) model).get(null));
             } catch (IllegalAccessException e) {
-                throw new TemplateModelException(
+                throw new TemplateException(
                     "Illegal access for field " + key + " of class " + clazz.getName());
             }
         }
 
-        throw new TemplateModelException(
+        throw new TemplateException(
             "No such key: " + key + " in class " + clazz.getName());
     }
 
@@ -95,18 +94,18 @@ final class StaticModel implements TemplateHashModelEx {
     }
     
     @Override
-    public TemplateCollectionModel keys() throws TemplateModelException {
+    public TemplateCollectionModel keys() throws TemplateException {
         return (TemplateCollectionModel) wrapper.getOuterIdentity().wrap(map.keySet());
     }
     
     @Override
-    public TemplateCollectionModel values() throws TemplateModelException {
+    public TemplateCollectionModel values() throws TemplateException {
         return (TemplateCollectionModel) wrapper.getOuterIdentity().wrap(map.values());
     }
 
-    private void populate() throws TemplateModelException {
+    private void populate() throws TemplateException {
         if (!Modifier.isPublic(clazz.getModifiers())) {
-            throw new TemplateModelException(
+            throw new TemplateException(
                 "Can't wrap the non-public class " + clazz.getName());
         }
         
@@ -166,10 +165,10 @@ final class StaticModel implements TemplateHashModelEx {
                 Object value = entry.getValue();
                 if (value instanceof Method) {
                     Method method = (Method) value;
-                    entry.setValue(new JavaMethodModel(null, method,
+                    entry.setValue(new SimpleJavaMethodModel(null, method,
                             method.getParameterTypes(), wrapper));
                 } else if (value instanceof OverloadedMethods) {
-                    entry.setValue(new OverloadedMethodsModel(null, (OverloadedMethods) value, wrapper));
+                    entry.setValue(new OverloadedJavaMethodModel(null, (OverloadedMethods) value, wrapper));
                 }
             }
         }

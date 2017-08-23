@@ -21,7 +21,7 @@ package org.apache.freemarker.core;
 
 import org.apache.freemarker.core.model.TemplateHashModel;
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.util._StringUtil;
+import org.apache.freemarker.core.util._StringUtils;
 
 /**
  * AST expression node: {@code .} operator.
@@ -41,12 +41,12 @@ final class ASTExpDot extends ASTExpression {
         if (leftModel instanceof TemplateHashModel) {
             return ((TemplateHashModel) leftModel).get(key);
         }
-        throw new NonHashException(target, leftModel, env);
+        throw MessageUtils.newUnexpectedOperandTypeException(target, leftModel, TemplateHashModel.class, env);
     }
 
     @Override
     public String getCanonicalForm() {
-        return target.getCanonicalForm() + getASTNodeDescriptor() + _StringUtil.toFTLIdentifierReferenceAfterDot(key);
+        return target.getCanonicalForm() + getASTNodeDescriptor() + _StringUtils.toFTLIdentifierReferenceAfterDot(key);
     }
     
     @Override

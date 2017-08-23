@@ -20,18 +20,17 @@
 package org.apache.freemarker.core;
 
 
-import org.apache.freemarker.core.model.Constants;
 import org.apache.freemarker.core.model.TemplateCollectionModel;
 import org.apache.freemarker.core.model.TemplateHashModelEx;
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateScalarModel;
+import org.apache.freemarker.core.model.TemplateStringModel;
 import org.apache.freemarker.core.model.TemplateSequenceModel;
 
 /** {@code exp!defExp}, {@code (exp)!defExp} and the same two with {@code (exp)!}. */
 class ASTExpDefault extends ASTExpression {
 	
 	static private class EmptyStringAndSequence
-	  implements TemplateScalarModel, TemplateSequenceModel, TemplateHashModelEx {
+	  implements TemplateStringModel, TemplateSequenceModel, TemplateHashModelEx {
 		@Override
         public String getAsString() {
 			return "";
@@ -54,11 +53,11 @@ class ASTExpDefault extends ASTExpression {
 		}
 		@Override
         public TemplateCollectionModel keys() {
-			return Constants.EMPTY_COLLECTION;
+			return TemplateCollectionModel.EMPTY_COLLECTION;
 		}
 		@Override
         public TemplateCollectionModel values() {
-			return Constants.EMPTY_COLLECTION;
+			return TemplateCollectionModel.EMPTY_COLLECTION;
 		}
 		
 	}

@@ -27,25 +27,28 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
+import javax.servlet.jsp.JspException;
+import javax.servlet.jsp.tagext.DynamicAttributes;
+import javax.servlet.jsp.tagext.JspTag;
+
 import org.apache.freemarker.core.Template;
+import org.apache.freemarker.core.TemplateException;
 import org.apache.freemarker.core._DelayedJQuote;
 import org.apache.freemarker.core._DelayedShortClassName;
 import org.apache.freemarker.core._ErrorDescriptionBuilder;
-import org.apache.freemarker.core._TemplateModelException;
 import org.apache.freemarker.core.model.ObjectWrapperAndUnwrapper;
-import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateModelException;
+import org.apache.freemarker.core.model.TemplateHashModelEx2;
+import org.apache.freemarker.core.model.TemplateModelWithOriginName;
+import org.apache.freemarker.core.model.TemplateStringModel;
 import org.apache.freemarker.core.model.impl.DefaultObjectWrapper;
-import org.apache.freemarker.core.util._StringUtil;
+import org.apache.freemarker.core.util._StringUtils;
 import org.apache.freemarker.servlet.jsp.SimpleTagDirectiveModel.TemplateExceptionWrapperJspException;
 
-class JspTagModelBase {
+abstract class JspTagModelBase implements TemplateModelWithOriginName {
     protected final String tagName;
     private final Class tagClass;
-    private final Method dynaSetter;
     private final Map propertySetters = new HashMap();
     
     protected JspTagModelBase(String tagName, Class tagClass) throws IntrospectionException {
@@ -59,41 +62,37 @@ class JspTagModelBase {
                 propertySetters.put(pd.getName(), m);
             }
         }
-        // Check to see if the tag implements the JSP2.0 DynamicAttributes
-        // interface, to allow setting of arbitrary attributes
-        Method dynaSetter;
-        try {
-            dynaSetter = tagClass.getMethod("setDynamicAttribute",
-                    String.class, String.class, Object.class);
-        } catch (NoSuchMethodException nsme) {
-            dynaSetter = null;
-        }
-        this.dynaSetter = dynaSetter;
     }
     
     Object getTagInstance() throws IllegalAccessException, InstantiationException {
         return tagClass.newInstance();
     }
     
-    void setupTag(Object tag, Map args, ObjectWrapperAndUnwrapper wrapper)
-    throws TemplateModelException, 
+    void setupTag(JspTag tag, TemplateHashModelEx2 args, ObjectWrapperAndUnwrapper wrapper)
+            throws TemplateException,
         InvocationTargetException, 
         IllegalAccessException {
         if (args != null && !args.isEmpty()) {
             final Object[] argArray = new Object[1];
-            for (Iterator iter = args.entrySet().iterator(); iter.hasNext(); ) {
-                final Map.Entry entry = (Map.Entry) iter.next();
-                final Object arg = wrapper.unwrap((TemplateModel) entry.getValue());
+            for (TemplateHashModelEx2.KeyValuePairIterator iter = args.keyValuePairIterator(); iter.hasNext(); ) {
+                final TemplateHashModelEx2.KeyValuePair entry = iter.next();
+                final Object arg = wrapper.unwrap(entry.getValue());
                 argArray[0] = arg;
-                final Object paramName = entry.getKey();
+                final String paramName = ((TemplateStringModel) entry.getKey()).getAsString();
                 Method setterMethod = (Method) propertySetters.get(paramName);
                 if (setterMethod == null) {
-                    if (dynaSetter == null) {
-                        throw new TemplateModelException("Unknown property "
-                                + _StringUtil.jQuote(paramName.toString())
-                                + " on instance of " + tagClass.getName());
+                    if (tag instanceof DynamicAttributes) {
+                        try {
+                            ((DynamicAttributes) tag).setDynamicAttribute(null, paramName, argArray[0]);
+                        } catch (JspException e) {
+                            throw new TemplateException(
+                                    "Failed to set JSP tag dynamic attribute ", new _DelayedJQuote(paramName), ".",
+                                    e);
+                        }
                     } else {
-                        dynaSetter.invoke(tag, null, paramName, argArray[0]);
+                        throw new TemplateException("Unknown property "
+                                + _StringUtils.jQuote(paramName.toString())
+                                + " on instance of " + tagClass.getName());
                     }
                 } else {
                     if (arg instanceof BigDecimal) {
@@ -123,24 +122,25 @@ class JspTagModelBase {
                                     "<@my.box style=\"info\" message=\"Hello ${name}!\" width=200 />",
                                     ".");
                         }
-                        throw new _TemplateModelException(e, null, desc);
+                        throw new TemplateException(e, null, desc);
                     }
                 }
             }
         }
     }
 
-    protected final TemplateModelException toTemplateModelExceptionOrRethrow(Exception e) throws TemplateModelException {
+    protected final TemplateException toTemplateExceptionOrRethrow(Throwable e)
+            throws TemplateException {
         if (e instanceof RuntimeException && !isCommonRuntimeException((RuntimeException) e)) {
             throw (RuntimeException) e;
         }
-        if (e instanceof TemplateModelException) {
-            throw (TemplateModelException) e;
+        if (e instanceof TemplateException) {
+            throw (TemplateException) e;
         }
         if (e instanceof TemplateExceptionWrapperJspException) {
-            return (TemplateModelException) e.getCause();
+            return (TemplateException) e.getCause();
         }
-        return new _TemplateModelException(e,
+        return new TemplateException(e,
                 "Error while invoking the ", new _DelayedJQuote(tagName), " JSP custom tag; see cause exception");
     }
 
@@ -158,5 +158,10 @@ class JspTagModelBase {
                 || eClass == ClassCastException.class
                 || eClass == IndexOutOfBoundsException.class;
     }
-    
+
+    @Override
+    public String getOriginName() {
+        // TODO Can't we know the namespace URI from somewhere?
+        return "jspCustomTag:" + tagName;
+    }
 }

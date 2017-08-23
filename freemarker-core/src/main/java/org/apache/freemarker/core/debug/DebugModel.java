@@ -23,7 +23,7 @@ import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.Date;
 
-import org.apache.freemarker.core.model.TemplateModelException;
+import org.apache.freemarker.core.TemplateException;
 
 /**
  * Represents the debugger-side mirror of a TemplateModel object, a Template
@@ -37,7 +37,7 @@ import org.apache.freemarker.core.model.TemplateModelException;
  * template models are implemented by the mirrored object.
  */
 public interface DebugModel extends Remote {
-    public static final int TYPE_SCALAR        =    1;
+    public static final int TYPE_STRING        =    1;
     public static final int TYPE_NUMBER        =    2;
     public static final int TYPE_DATE          =    4;
     public static final int TYPE_BOOLEAN       =    8;
@@ -45,59 +45,58 @@ public interface DebugModel extends Remote {
     public static final int TYPE_COLLECTION    =   32;
     public static final int TYPE_HASH          =   64;
     public static final int TYPE_HASH_EX       =  128;
-    public static final int TYPE_METHOD        =  256;
-    public static final int TYPE_METHOD_EX     =  512;
-    public static final int TYPE_TRANSFORM     = 1024;
+    public static final int TYPE_FUNCTION      =  256;
+    public static final int TYPE_DIRECTIVE     = 1024;
     public static final int TYPE_ENVIRONMENT   = 2048;
     public static final int TYPE_TEMPLATE      = 4096;
     public static final int TYPE_CONFIGURATION = 8192;
     
     public String getAsString()
-    throws TemplateModelException,
+    throws TemplateException,
         RemoteException;
         
     public Number getAsNumber()
-    throws TemplateModelException,
+    throws TemplateException,
         RemoteException;
     
     public boolean getAsBoolean()
-    throws TemplateModelException,
+    throws TemplateException,
         RemoteException;
     
     public Date getAsDate()
-    throws TemplateModelException,
+    throws TemplateException,
         RemoteException;
     
     public int getDateType()
-    throws TemplateModelException,
+    throws TemplateException,
         RemoteException;
         
     public int size()
-    throws TemplateModelException,
+    throws TemplateException,
         RemoteException;
         
     public DebugModel get(int index)
-    throws TemplateModelException,
+    throws TemplateException,
         RemoteException;
     
     public DebugModel[] get(int fromIndex, int toIndex)
-    throws TemplateModelException,
+    throws TemplateException,
         RemoteException;
         
     public DebugModel get(String key)
-    throws TemplateModelException,
+    throws TemplateException,
         RemoteException;
         
     public DebugModel[] get(String[] keys)
-    throws TemplateModelException,
+    throws TemplateException,
         RemoteException;
     
     public DebugModel[] getCollection()
-    throws TemplateModelException,
+    throws TemplateException,
         RemoteException;
 
     public String[] keys()
-    throws TemplateModelException,
+    throws TemplateException,
         RemoteException;
     
     public int getModelTypes()

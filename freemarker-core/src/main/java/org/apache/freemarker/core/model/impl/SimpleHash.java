@@ -19,7 +19,6 @@
 
 package org.apache.freemarker.core.model.impl;
 
-import java.io.Serializable;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -27,15 +26,14 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import org.apache.freemarker.core.TemplateException;
 import org.apache.freemarker.core._DelayedJQuote;
-import org.apache.freemarker.core._TemplateModelException;
 import org.apache.freemarker.core.model.ObjectWrapper;
 import org.apache.freemarker.core.model.TemplateBooleanModel;
 import org.apache.freemarker.core.model.TemplateCollectionModel;
 import org.apache.freemarker.core.model.TemplateHashModelEx;
 import org.apache.freemarker.core.model.TemplateHashModelEx2;
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateModelException;
 import org.apache.freemarker.core.model.WrappingTemplateModel;
 
 /**
@@ -76,7 +74,7 @@ import org.apache.freemarker.core.model.WrappingTemplateModel;
  * @see DefaultMapAdapter
  * @see TemplateHashModelEx
  */
-public class SimpleHash extends WrappingTemplateModel implements TemplateHashModelEx2, Serializable {
+public class SimpleHash extends WrappingTemplateModel implements TemplateHashModelEx2 {
 
     private final Map map;
     private boolean putFailed;
@@ -166,16 +164,16 @@ public class SimpleHash extends WrappingTemplateModel implements TemplateHashMod
     }
 
     @Override
-    public TemplateModel get(String key) throws TemplateModelException {
+    public TemplateModel get(String key) throws TemplateException {
         Object result;
         try {
             result = map.get(key);
         } catch (ClassCastException e) {
-            throw new _TemplateModelException(e,
+            throw new TemplateException(e,
                     "ClassCastException while getting Map entry with String key ",
                     new _DelayedJQuote(key));
         } catch (NullPointerException e) {
-            throw new _TemplateModelException(e,
+            throw new TemplateException(e,
                     "NullPointerException while getting Map entry with String key ",
                     new _DelayedJQuote(key));
         }
@@ -196,11 +194,11 @@ public class SimpleHash extends WrappingTemplateModel implements TemplateHashMod
                         putKey = charKey;
                     }
                 } catch (ClassCastException e) {
-                    throw new _TemplateModelException(e,
+                    throw new TemplateException(e,
                             "ClassCastException while getting Map entry with Character key ",
                             new _DelayedJQuote(key));
                 } catch (NullPointerException e) {
-                    throw new _TemplateModelException(e,
+                    throw new TemplateException(e,
                             "NullPointerException while getting Map entry with Character key ",
                             new _DelayedJQuote(key));
                 }

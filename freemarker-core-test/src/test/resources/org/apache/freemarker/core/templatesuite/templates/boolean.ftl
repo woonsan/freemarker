@@ -28,7 +28,7 @@
 
 <#assign b=true>
 
-<p>Now perform scalar boolean tests:</p>
+<p>Now perform boolean tests:</p>
 
 <p><#if b>
     b is true.<br />
@@ -71,10 +71,10 @@
 <#else>
     boolean4 && boolean5 failed.<br />
 </#if></p>
-<@assert test=true &amp;&amp; true />
-<@assert test=!(false &amp;&amp; true) />
-<@assert test=true \and true />
-<@assert test=!(false \and true) />
+<@assert true &amp;&amp; true />
+<@assert !(false &amp;&amp; true) />
+<@assert true \and true />
+<@assert !(false \and true) />
  
 <p>Now test list models:</p>
 

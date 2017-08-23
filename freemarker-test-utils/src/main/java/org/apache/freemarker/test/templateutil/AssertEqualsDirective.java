@@ -20,71 +20,70 @@
 package org.apache.freemarker.test.templateutil;
 
 import java.io.IOException;
-import java.util.Map;
+import java.io.Writer;
 
+import org.apache.freemarker.core.CallPlace;
 import org.apache.freemarker.core.Environment;
-import org.apache.freemarker.core.NestedContentNotSupportedException;
 import org.apache.freemarker.core.TemplateException;
+import org.apache.freemarker.core.model.ArgumentArrayLayout;
 import org.apache.freemarker.core.model.TemplateBooleanModel;
 import org.apache.freemarker.core.model.TemplateDateModel;
-import org.apache.freemarker.core.model.TemplateDirectiveBody;
 import org.apache.freemarker.core.model.TemplateDirectiveModel;
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateModelException;
 import org.apache.freemarker.core.model.TemplateNumberModel;
-import org.apache.freemarker.core.model.TemplateScalarModel;
-import org.apache.freemarker.core.util._StringUtil;
+import org.apache.freemarker.core.model.TemplateStringModel;
+import org.apache.freemarker.core.util.CallableUtils;
+import org.apache.freemarker.core.util.StringToIndexMap;
+import org.apache.freemarker.core.util._StringUtils;
 
 public class AssertEqualsDirective implements TemplateDirectiveModel {
     
     public static AssertEqualsDirective INSTANCE = new AssertEqualsDirective();
 
-    private static final String ACTUAL_PARAM = "actual";
-    private static final String EXPECTED_PARAM = "expected";
+    private static final int ACTUAL_ARG_IDX = 0;
+    private static final int EXPECTED_ARG_IDX = 1;
+
+    private static final ArgumentArrayLayout ARGS_LAYOUT = ArgumentArrayLayout.create(
+            0,
+            false,
+            StringToIndexMap.of(
+                    "actual", ACTUAL_ARG_IDX,
+                    "expected", EXPECTED_ARG_IDX),
+            false);
 
     private AssertEqualsDirective() { }
     
     @Override
-    public void execute(Environment env, Map params, TemplateModel[] loopVars, TemplateDirectiveBody body)
+    public void execute(TemplateModel[] args, CallPlace callPlace, Writer out, Environment env)
             throws TemplateException, IOException {
-        TemplateModel actual = null;
-        TemplateModel expected = null;
-        for (Object paramEnt  : params.entrySet()) {
-            Map.Entry<String, TemplateModel> param = (Map.Entry) paramEnt;
-            String paramName = param.getKey();
-            if (paramName.equals(ACTUAL_PARAM)) {
-                actual = param.getValue();
-            } else if (paramName.equals(EXPECTED_PARAM)) {
-                expected = param.getValue();
-            } else {
-                throw new UnsupportedParameterException(paramName, env);
-            }
-        }
-        if (actual == null) {
-            throw new MissingRequiredParameterException(ACTUAL_PARAM, env);
-        }
-        if (expected == null) {
-            throw new MissingRequiredParameterException(EXPECTED_PARAM, env);
-        }
-        NestedContentNotSupportedException.check(body);
-        
+        TemplateModel actual = CallableUtils.getArgument(args, ACTUAL_ARG_IDX, null, this);
+        TemplateModel expected = CallableUtils.getArgument(args, ACTUAL_ARG_IDX, null, this);
         if (!env.applyEqualsOperatorLenient(actual, expected)) {
-            throw new AssertationFailedInTemplateException("Assertion failed:\n"
-                    + "Expected: " + tryUnwrapp(expected) + "\n"
-                    + "Actual: " + tryUnwrapp(actual),
+            throw new AssertionFailedInTemplateException("Assertion failed:\n"
+                    + "Expected: " + tryUnwrap(expected) + "\n"
+                    + "Actual: " + tryUnwrap(actual),
                     env);
         }
-        
     }
 
-    private String tryUnwrapp(TemplateModel value) throws TemplateModelException {
+    @Override
+    public ArgumentArrayLayout getDirectiveArgumentArrayLayout() {
+        return ARGS_LAYOUT;
+    }
+
+    @Override
+    public boolean isNestedContentSupported() {
+        return false;
+    }
+
+    private String tryUnwrap(TemplateModel value) throws TemplateException {
         if (value == null) return "null";
-        // This is the same order as comparison goes:
+            // This is the same order as comparison goes:
         else if (value instanceof TemplateNumberModel) return ((TemplateNumberModel) value).getAsNumber().toString();
         else if (value instanceof TemplateDateModel) return ((TemplateDateModel) value).getAsDate().toString();
-        else if (value instanceof TemplateScalarModel) return _StringUtil.jQuote(((TemplateScalarModel) value).getAsString());
+        else if (value instanceof TemplateStringModel) return _StringUtils.jQuote(((TemplateStringModel) value).getAsString());
         else if (value instanceof TemplateBooleanModel) return String.valueOf(((TemplateBooleanModel) value).getAsBoolean());
-        // This shouldn't be reached, as the comparison should have failed earlier:
+            // This shouldn't be reached, as the comparison should have failed earlier:
         else return value.toString();
     }
 

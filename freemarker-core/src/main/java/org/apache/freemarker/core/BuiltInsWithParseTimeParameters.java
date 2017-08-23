@@ -132,9 +132,9 @@ final class BuiltInsWithParseTimeParameters {
             for (int i = 0; i + 1 < paramCnt; i += 2) {
                 ASTExpression caseExp = (ASTExpression) parameters.get(i);
                 TemplateModel caseValue = caseExp.evalToNonMissing(env);
-                if (_EvalUtil.compare(
+                if (_EvalUtils.compare(
                         targetValue, target,
-                        _EvalUtil.CMP_OP_EQUALS, "==",
+                        _EvalUtils.CMP_OP_EQUALS, "==",
                         caseValue, caseExp,
                         this, true,
                         false, false, false,
@@ -144,7 +144,7 @@ final class BuiltInsWithParseTimeParameters {
             }
             
             if (paramCnt % 2 == 0) {
-                throw new _MiscTemplateException(target,
+                throw new TemplateException(target,
                         "The value before ?", key, "(case1, value1, case2, value2, ...) didn't match any of the "
                         + "case parameters, and there was no default value parameter (an additional last parameter) "
                         + "eithter. ");

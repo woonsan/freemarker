@@ -20,6 +20,7 @@ package org.apache.freemarker.core;
 
 import org.apache.freemarker.core.model.TemplateMarkupOutputModel;
 import org.apache.freemarker.core.model.TemplateModel;
+import org.apache.freemarker.core.model.TemplateStringModel;
 
 /**
  * A string built-in whose usage is banned when auto-escaping with a markup-output format is active.
@@ -31,7 +32,7 @@ abstract class BuiltInForLegacyEscaping extends BuiltInBannedWhenAutoEscaping {
     TemplateModel _eval(Environment env)
     throws TemplateException {
         TemplateModel tm = target.eval(env);
-        Object moOrStr = _EvalUtil.coerceModelToStringOrMarkup(tm, target, null, env);
+        Object moOrStr = _EvalUtils.coerceModelToStringOrMarkup(tm, target, null, env);
         if (moOrStr instanceof String) {
             return calculateResult((String) moOrStr, env);
         } else {
@@ -39,7 +40,7 @@ abstract class BuiltInForLegacyEscaping extends BuiltInBannedWhenAutoEscaping {
             if (mo.getOutputFormat().isLegacyBuiltInBypassed(key)) {
                 return mo;
             }
-            throw new NonStringException(target, tm, env);
+            throw MessageUtils.newUnexpectedOperandTypeException(target, tm, TemplateStringModel.class, env);
         }
     }
     

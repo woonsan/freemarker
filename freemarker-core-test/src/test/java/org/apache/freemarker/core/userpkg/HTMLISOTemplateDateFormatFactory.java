@@ -23,12 +23,12 @@ import java.util.Locale;
 import java.util.TimeZone;
 
 import org.apache.freemarker.core.Environment;
+import org.apache.freemarker.core.TemplateException;
 import org.apache.freemarker.core.model.TemplateDateModel;
-import org.apache.freemarker.core.model.TemplateModelException;
 import org.apache.freemarker.core.outputformat.impl.HTMLOutputFormat;
-import org.apache.freemarker.core.util._DateUtil;
-import org.apache.freemarker.core.util._DateUtil.CalendarFieldsToDateConverter;
-import org.apache.freemarker.core.util._DateUtil.DateParseException;
+import org.apache.freemarker.core.util._DateUtils;
+import org.apache.freemarker.core.util._DateUtils.CalendarFieldsToDateConverter;
+import org.apache.freemarker.core.util._DateUtils.DateParseException;
 import org.apache.freemarker.core.valueformat.InvalidFormatParametersException;
 import org.apache.freemarker.core.valueformat.TemplateDateFormat;
 import org.apache.freemarker.core.valueformat.TemplateDateFormatFactory;
@@ -57,7 +57,7 @@ public class HTMLISOTemplateDateFormatFactory extends TemplateDateFormatFactory 
 
         private static final HTMLISOTemplateDateFormat INSTANCE = new HTMLISOTemplateDateFormat();
 
-        private _DateUtil.TrivialDateToISO8601CalendarFactory calendarFactory;
+        private _DateUtils.TrivialDateToISO8601CalendarFactory calendarFactory;
 
         private CalendarFieldsToDateConverter calToDateConverter;
         
@@ -65,13 +65,13 @@ public class HTMLISOTemplateDateFormatFactory extends TemplateDateFormatFactory 
         
         @Override
         public String formatToPlainText(TemplateDateModel dateModel)
-                throws UnformattableValueException, TemplateModelException {
+                throws UnformattableValueException, TemplateException {
             if (calendarFactory == null) {
-                calendarFactory = new _DateUtil.TrivialDateToISO8601CalendarFactory();
+                calendarFactory = new _DateUtils.TrivialDateToISO8601CalendarFactory();
             }
-            return _DateUtil.dateToISO8601String(
+            return _DateUtils.dateToISO8601String(
                     TemplateFormatUtil.getNonNullDate(dateModel),
-                    true, true, true, _DateUtil.ACCURACY_SECONDS, _DateUtil.UTC,
+                    true, true, true, _DateUtils.ACCURACY_SECONDS, _DateUtils.UTC,
                     calendarFactory);
         }
 
@@ -89,16 +89,16 @@ public class HTMLISOTemplateDateFormatFactory extends TemplateDateFormatFactory 
         public Date parse(String s, int dateType) throws UnparsableValueException {
             try {
                 if (calToDateConverter == null) {
-                    calToDateConverter = new _DateUtil.TrivialCalendarFieldsToDateConverter();
+                    calToDateConverter = new _DateUtils.TrivialCalendarFieldsToDateConverter();
                 }
-                return _DateUtil.parseISO8601DateTime(s, _DateUtil.UTC, calToDateConverter);
+                return _DateUtils.parseISO8601DateTime(s, _DateUtils.UTC, calToDateConverter);
             } catch (DateParseException e) {
                 throw new UnparsableValueException("Malformed ISO date-time", e);
             }
         }
 
         @Override
-        public Object format(TemplateDateModel dateModel) throws TemplateValueFormatException, TemplateModelException {
+        public Object format(TemplateDateModel dateModel) throws TemplateValueFormatException, TemplateException {
             return HTMLOutputFormat.INSTANCE.fromMarkup(
                     formatToPlainText(dateModel).replace("T", "<span class='T'>T</span>"));
         }

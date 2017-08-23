@@ -21,14 +21,14 @@ package org.apache.freemarker.core.outputformat.impl;
 import java.io.IOException;
 import java.io.Writer;
 
-import org.apache.freemarker.core.model.TemplateModelException;
+import org.apache.freemarker.core.TemplateException;
 import org.apache.freemarker.core.outputformat.CommonMarkupOutputFormat;
 import org.apache.freemarker.core.outputformat.OutputFormat;
-import org.apache.freemarker.core.util._StringUtil;
+import org.apache.freemarker.core.util._StringUtils;
 
 /**
  * Represents the Rich Text Format output format (MIME type "application/rtf", name "RTF"). This format escapes by
- * default (via {@link _StringUtil#RTFEnc(String)}). The {@code ?rtf} built-in silently bypasses template output values
+ * default (via {@link _StringUtils#RTFEnc(String)}). The {@code ?rtf} built-in silently bypasses template output values
  * of the type produced by this output format ({@link TemplateRTFOutputModel}).
  */
 public final class RTFOutputFormat extends CommonMarkupOutputFormat<TemplateRTFOutputModel> {
@@ -53,13 +53,13 @@ public final class RTFOutputFormat extends CommonMarkupOutputFormat<TemplateRTFO
     }
 
     @Override
-    public void output(String textToEsc, Writer out) throws IOException, TemplateModelException {
-        _StringUtil.RTFEnc(textToEsc, out);
+    public void output(String textToEsc, Writer out) throws IOException, TemplateException {
+        _StringUtils.RTFEnc(textToEsc, out);
     }
 
     @Override
     public String escapePlainText(String plainTextContent) {
-        return _StringUtil.RTFEnc(plainTextContent);
+        return _StringUtils.RTFEnc(plainTextContent);
     }
 
     @Override

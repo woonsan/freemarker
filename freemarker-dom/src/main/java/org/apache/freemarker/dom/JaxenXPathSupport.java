@@ -38,9 +38,8 @@ import org.apache.freemarker.core.TemplateException;
 import org.apache.freemarker.core.model.TemplateBooleanModel;
 import org.apache.freemarker.core.model.TemplateDateModel;
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateModelException;
 import org.apache.freemarker.core.model.TemplateNumberModel;
-import org.apache.freemarker.core.model.TemplateScalarModel;
+import org.apache.freemarker.core.model.TemplateStringModel;
 import org.apache.freemarker.core.util.UndeclaredThrowableException;
 import org.apache.freemarker.core.util._ObjectHolder;
 import org.jaxen.BaseXPath;
@@ -76,7 +75,7 @@ class JaxenXPathSupport implements XPathSupport {
     private final static ArrayList EMPTY_ARRAYLIST = new ArrayList();
 
     @Override
-    public TemplateModel executeQuery(Object context, String xpathQuery) throws TemplateModelException {
+    public TemplateModel executeQuery(Object context, String xpathQuery) throws TemplateException {
         try {
             BaseXPath xpath;
             Map<String, BaseXPath> xpathCache = Environment.getCurrentEnvironmentNotNull().getCurrentTemplateNotNull()
@@ -100,12 +99,12 @@ class JaxenXPathSupport implements XPathSupport {
             return nlm;
         } catch (UndeclaredThrowableException e) {
             Throwable t  = e.getUndeclaredThrowable();
-            if (t instanceof TemplateModelException) {
-                throw (TemplateModelException) t;
+            if (t instanceof TemplateException) {
+                throw (TemplateException) t;
             }
             throw e;
-        } catch (JaxenException je) {
-            throw new TemplateModelException(je);
+        } catch (JaxenException e) {
+            throw new TemplateException(e);
         }
     }
 
@@ -129,8 +128,8 @@ class JaxenXPathSupport implements XPathSupport {
                 if (model == null) {
                     throw new UnresolvableException("Variable \"" + localName + "\" not found.");
                 }
-                if (model instanceof TemplateScalarModel) {
-                    return ((TemplateScalarModel) model).getAsString();
+                if (model instanceof TemplateStringModel) {
+                    return ((TemplateStringModel) model).getAsString();
                 }
                 if (model instanceof TemplateNumberModel) {
                     return ((TemplateNumberModel) model).getAsNumber();
@@ -141,7 +140,7 @@ class JaxenXPathSupport implements XPathSupport {
                 if (model instanceof TemplateBooleanModel) {
                     return Boolean.valueOf(((TemplateBooleanModel) model).getAsBoolean());
                 }
-            } catch (TemplateModelException e) {
+            } catch (TemplateException e) {
                 throw new UndeclaredThrowableException(e);
             }
             throw new UnresolvableException(

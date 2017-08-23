@@ -22,9 +22,8 @@ package org.apache.freemarker.core;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-import org.apache.freemarker.core.model.TemplateModelException;
 import org.apache.freemarker.core.templateresolver.impl.MruCacheStorage;
-import org.apache.freemarker.core.util._StringUtil;
+import org.apache.freemarker.core.util._StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,7 +63,7 @@ final class RegexpHelper {
     private RegexpHelper() { }
 
     static Pattern getPattern(String patternString, int flags)
-    throws TemplateModelException {
+    throws TemplateException {
         PatternCacheKey patternKey = new PatternCacheKey(patternString, flags);
         
         Pattern result;
@@ -79,8 +78,7 @@ final class RegexpHelper {
         try {
             result = Pattern.compile(patternString, flags);
         } catch (PatternSyntaxException e) {
-            throw new _TemplateModelException(e,
-                    "Malformed regular expression: ", new _DelayedGetMessage(e));
+            throw new TemplateException(e, "Malformed regular expression: ", new _DelayedGetMessage(e));
         }
         synchronized (patternCache) {
             patternCache.put(patternKey, result);
@@ -145,7 +143,7 @@ final class RegexpHelper {
                         // [FM3] Should be an error
                         RegexpHelper.logFlagWarning(
                                 "Unrecognized regular expression flag: "
-                                + _StringUtil.jQuote(String.valueOf(c)) + ".");
+                                + _StringUtils.jQuote(String.valueOf(c)) + ".");
                     }
             }  // switch
         }
@@ -176,12 +174,12 @@ final class RegexpHelper {
         LOG.warn(message);
     }
 
-    static void checkNonRegexpFlags(String biName, long flags) throws _TemplateModelException {
+    static void checkNonRegexpFlags(String biName, long flags) throws TemplateException {
         checkOnlyHasNonRegexpFlags(biName, flags, false);
     }
     
     static void checkOnlyHasNonRegexpFlags(String biName, long flags, boolean strict)
-            throws _TemplateModelException {
+            throws TemplateException {
         if (!strict && !flagWarningsEnabled) return;
         
         String flag; 
@@ -198,7 +196,7 @@ final class RegexpHelper {
         final Object[] msg = { "?", biName ," doesn't support the \"", flag, "\" flag "
                 + "without the \"r\" flag." };
         if (strict) {
-            throw new _TemplateModelException(msg);
+            throw new TemplateException(msg);
         } else {
             // Suppress error for backward compatibility
             logFlagWarning(new _ErrorDescriptionBuilder(msg).toString());

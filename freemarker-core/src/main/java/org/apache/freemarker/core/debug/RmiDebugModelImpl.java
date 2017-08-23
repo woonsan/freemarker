@@ -25,20 +25,19 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import org.apache.freemarker.core.TemplateException;
 import org.apache.freemarker.core.model.TemplateBooleanModel;
 import org.apache.freemarker.core.model.TemplateCollectionModel;
 import org.apache.freemarker.core.model.TemplateDateModel;
+import org.apache.freemarker.core.model.TemplateDirectiveModel;
+import org.apache.freemarker.core.model.TemplateFunctionModel;
 import org.apache.freemarker.core.model.TemplateHashModel;
 import org.apache.freemarker.core.model.TemplateHashModelEx;
-import org.apache.freemarker.core.model.TemplateMethodModel;
-import org.apache.freemarker.core.model.TemplateMethodModelEx;
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateModelException;
 import org.apache.freemarker.core.model.TemplateModelIterator;
 import org.apache.freemarker.core.model.TemplateNumberModel;
-import org.apache.freemarker.core.model.TemplateScalarModel;
+import org.apache.freemarker.core.model.TemplateStringModel;
 import org.apache.freemarker.core.model.TemplateSequenceModel;
-import org.apache.freemarker.core.model.TemplateTransformModel;
 
 /**
  */
@@ -58,17 +57,17 @@ class RmiDebugModelImpl extends UnicastRemoteObject implements DebugModel {
         return (DebugModel) RmiDebuggedEnvironmentImpl.getCachedWrapperFor(tm);
     }
     @Override
-    public String getAsString() throws TemplateModelException {
-        return ((TemplateScalarModel) model).getAsString();
+    public String getAsString() throws TemplateException {
+        return ((TemplateStringModel) model).getAsString();
     }
 
     @Override
-    public Number getAsNumber() throws TemplateModelException {
+    public Number getAsNumber() throws TemplateException {
         return ((TemplateNumberModel) model).getAsNumber();
     }
 
     @Override
-    public Date getAsDate() throws TemplateModelException {
+    public Date getAsDate() throws TemplateException {
         return ((TemplateDateModel) model).getAsDate();
     }
 
@@ -78,12 +77,12 @@ class RmiDebugModelImpl extends UnicastRemoteObject implements DebugModel {
     }
 
     @Override
-    public boolean getAsBoolean() throws TemplateModelException {
+    public boolean getAsBoolean() throws TemplateException {
         return ((TemplateBooleanModel) model).getAsBoolean();
     }
 
     @Override
-    public int size() throws TemplateModelException {
+    public int size() throws TemplateException {
         if (model instanceof TemplateSequenceModel) {
             return ((TemplateSequenceModel) model).size();
         }
@@ -91,12 +90,12 @@ class RmiDebugModelImpl extends UnicastRemoteObject implements DebugModel {
     }
 
     @Override
-    public DebugModel get(int index) throws TemplateModelException, RemoteException {
+    public DebugModel get(int index) throws TemplateException, RemoteException {
         return getDebugModel(((TemplateSequenceModel) model).get(index));
     }
     
     @Override
-    public DebugModel[] get(int fromIndex, int toIndex) throws TemplateModelException, RemoteException {
+    public DebugModel[] get(int fromIndex, int toIndex) throws TemplateException, RemoteException {
         DebugModel[] dm = new DebugModel[toIndex - fromIndex];
         TemplateSequenceModel s = (TemplateSequenceModel) model;
         for (int i = fromIndex; i < toIndex; i++) {
@@ -106,7 +105,7 @@ class RmiDebugModelImpl extends UnicastRemoteObject implements DebugModel {
     }
 
     @Override
-    public DebugModel[] getCollection() throws TemplateModelException, RemoteException {
+    public DebugModel[] getCollection() throws TemplateException, RemoteException {
         List list = new ArrayList();
         TemplateModelIterator i = ((TemplateCollectionModel) model).iterator();
         while (i.hasNext()) {
@@ -116,12 +115,12 @@ class RmiDebugModelImpl extends UnicastRemoteObject implements DebugModel {
     }
     
     @Override
-    public DebugModel get(String key) throws TemplateModelException, RemoteException {
+    public DebugModel get(String key) throws TemplateException, RemoteException {
         return getDebugModel(((TemplateHashModel) model).get(key));
     }
     
     @Override
-    public DebugModel[] get(String[] keys) throws TemplateModelException, RemoteException {
+    public DebugModel[] get(String[] keys) throws TemplateException, RemoteException {
         DebugModel[] dm = new DebugModel[keys.length];
         TemplateHashModel h = (TemplateHashModel) model;
         for (int i = 0; i < keys.length; i++) {
@@ -131,12 +130,12 @@ class RmiDebugModelImpl extends UnicastRemoteObject implements DebugModel {
     }
 
     @Override
-    public String[] keys() throws TemplateModelException {
+    public String[] keys() throws TemplateException {
         TemplateHashModelEx h = (TemplateHashModelEx) model;
         List list = new ArrayList();
         TemplateModelIterator i = h.keys().iterator();
         while (i.hasNext()) {
-            list.add(((TemplateScalarModel) i.next()).getAsString());
+            list.add(((TemplateStringModel) i.next()).getAsString());
         }
         return (String[]) list.toArray(new String[list.size()]);
     }
@@ -148,17 +147,16 @@ class RmiDebugModelImpl extends UnicastRemoteObject implements DebugModel {
     
     private static int calculateType(TemplateModel model) {
         int type = 0;
-        if (model instanceof TemplateScalarModel) type += TYPE_SCALAR;
+        if (model instanceof TemplateStringModel) type += TYPE_STRING;
         if (model instanceof TemplateNumberModel) type += TYPE_NUMBER;
         if (model instanceof TemplateDateModel) type += TYPE_DATE;
         if (model instanceof TemplateBooleanModel) type += TYPE_BOOLEAN;
         if (model instanceof TemplateSequenceModel) type += TYPE_SEQUENCE;
         if (model instanceof TemplateCollectionModel) type += TYPE_COLLECTION;
         if (model instanceof TemplateHashModelEx) type += TYPE_HASH_EX;
-        else if (model instanceof TemplateHashModel) type += TYPE_HASH;
-        if (model instanceof TemplateMethodModelEx) type += TYPE_METHOD_EX;
-        else if (model instanceof TemplateMethodModel) type += TYPE_METHOD;
-        if (model instanceof TemplateTransformModel) type += TYPE_TRANSFORM;
+        if (model instanceof TemplateHashModel) type += TYPE_HASH;
+        if (model instanceof TemplateFunctionModel) type += TYPE_FUNCTION;
+        if (model instanceof TemplateDirectiveModel) type += TYPE_DIRECTIVE;
         return type;
     }
 }

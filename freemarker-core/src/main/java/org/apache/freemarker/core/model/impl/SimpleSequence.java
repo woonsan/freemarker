@@ -19,14 +19,13 @@
 
 package org.apache.freemarker.core.model.impl;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import org.apache.freemarker.core.TemplateException;
 import org.apache.freemarker.core.model.ObjectWrapper;
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateModelException;
 import org.apache.freemarker.core.model.TemplateSequenceModel;
 import org.apache.freemarker.core.model.WrappingTemplateModel;
 
@@ -68,7 +67,7 @@ import org.apache.freemarker.core.model.WrappingTemplateModel;
  * @see DefaultArrayAdapter
  * @see TemplateSequenceModel
  */
-public class SimpleSequence extends WrappingTemplateModel implements TemplateSequenceModel, Serializable {
+public class SimpleSequence extends WrappingTemplateModel implements TemplateSequenceModel {
 
     /**
      * The {@link List} that stored the elements of this sequence. It might contains both {@link TemplateModel} elements
@@ -133,7 +132,7 @@ public class SimpleSequence extends WrappingTemplateModel implements TemplateSeq
      * it to one now, and writes it back into the backing list.
      */
     @Override
-    public TemplateModel get(int index) throws TemplateModelException {
+    public TemplateModel get(int index) throws TemplateException {
         try {
             Object value = list.get(index);
             if (value instanceof TemplateModel) {

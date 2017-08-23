@@ -19,7 +19,6 @@
 package org.apache.freemarker.core;
 
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateModelException;
 import org.apache.freemarker.core.model.TemplateNodeModelEx;
 
 abstract class BuiltInForNodeEx extends ASTExpBuiltIn {
@@ -29,9 +28,9 @@ abstract class BuiltInForNodeEx extends ASTExpBuiltIn {
         if (model instanceof TemplateNodeModelEx) {
             return calculateResult((TemplateNodeModelEx) model, env);
         } else {
-            throw new NonExtendedNodeException(target, model, env);
+            throw MessageUtils.newUnexpectedOperandTypeException(target, model, TemplateNodeModelEx.class, env);
         }
     }
     abstract TemplateModel calculateResult(TemplateNodeModelEx nodeModel, Environment env)
-            throws TemplateModelException;
+            throws TemplateException;
 }

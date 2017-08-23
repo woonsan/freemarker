@@ -23,18 +23,18 @@ import java.util.Collections;
 
 import org.apache.freemarker.core.Environment;
 import org.apache.freemarker.core.Template;
+import org.apache.freemarker.core.TemplateException;
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateModelException;
-import org.apache.freemarker.core.model.TemplateScalarModel;
+import org.apache.freemarker.core.model.TemplateStringModel;
 import org.apache.freemarker.core.model.TemplateSequenceModel;
-import org.apache.freemarker.core.model.impl.SimpleScalar;
-import org.apache.freemarker.core.util._StringUtil;
+import org.apache.freemarker.core.model.impl.SimpleString;
+import org.apache.freemarker.core.util._StringUtils;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-class ElementModel extends NodeModel implements TemplateScalarModel {
+class ElementModel extends NodeModel implements TemplateStringModel {
 
     public ElementModel(Element element) {
         super(element);
@@ -57,7 +57,7 @@ class ElementModel extends NodeModel implements TemplateScalarModel {
      * The special key "/" returns the root document node associated with this element.
      */
     @Override
-    public TemplateModel get(String key) throws TemplateModelException {
+    public TemplateModel get(String key) throws TemplateException {
         if (key.equals("*")) {
             NodeListModel ns = new NodeListModel(this);
             TemplateSequenceModel children = getChildNodes();
@@ -76,15 +76,15 @@ class ElementModel extends NodeModel implements TemplateScalarModel {
                     return new NodeListModel(node.getAttributes(), this);
                 } else if (key.equals(AtAtKey.START_TAG.getKey())) {
                     NodeOutputter nodeOutputter = new NodeOutputter(node);
-                    return new SimpleScalar(nodeOutputter.getOpeningTag((Element) node));
+                    return new SimpleString(nodeOutputter.getOpeningTag((Element) node));
                 } else if (key.equals(AtAtKey.END_TAG.getKey())) {
                     NodeOutputter nodeOutputter = new NodeOutputter(node);
-                    return new SimpleScalar(nodeOutputter.getClosingTag((Element) node));
+                    return new SimpleString(nodeOutputter.getClosingTag((Element) node));
                 } else if (key.equals(AtAtKey.ATTRIBUTES_MARKUP.getKey())) {
                     StringBuilder buf = new StringBuilder();
                     NodeOutputter nu = new NodeOutputter(node);
                     nu.outputContent(node.getAttributes(), buf);
-                    return new SimpleScalar(buf.toString().trim());
+                    return new SimpleString(buf.toString().trim());
                 } else if (key.equals(AtAtKey.PREVIOUS_SIBLING_ELEMENT.getKey())) {
                     Node previousSibling = node.getPreviousSibling();
                     while (previousSibling != null && !isSignificantNode(previousSibling)) {
@@ -104,7 +104,7 @@ class ElementModel extends NodeModel implements TemplateScalarModel {
                     return super.get(key);
                 }
             } else { // Starts with "@", but not with "@@"
-                if (DomStringUtil.isXMLNameLike(key, 1)) {
+                if (DomStringUtils.isXMLNameLike(key, 1)) {
                     Attr att = getAttribute(key.substring(1));
                     if (att == null) { 
                         return new NodeListModel(this);
@@ -117,7 +117,7 @@ class ElementModel extends NodeModel implements TemplateScalarModel {
                     return super.get(key);
                 }
             }
-        } else if (DomStringUtil.isXMLNameLike(key)) {
+        } else if (DomStringUtils.isXMLNameLike(key)) {
             // We interpret key as an element name
             NodeListModel result = ((NodeListModel) getChildNodes()).filterByName(key);
             return result.size() != 1 ? result : result.get(0);
@@ -128,7 +128,7 @@ class ElementModel extends NodeModel implements TemplateScalarModel {
     }
 
     @Override
-    public String getAsString() throws TemplateModelException {
+    public String getAsString() throws TemplateException {
         NodeList nl = node.getChildNodes();
         String result = "";
         for (int i = 0; i < nl.getLength(); i++) {
@@ -139,7 +139,7 @@ class ElementModel extends NodeModel implements TemplateScalarModel {
                              + "\nThis element with name \""
                              + node.getNodeName()
                              + "\" has a child element named: " + child.getNodeName();
-                throw new TemplateModelException(msg);
+                throw new TemplateException(msg);
             } else if (nodeType == Node.TEXT_NODE || nodeType == Node.CDATA_SECTION_NODE) {
                 result += child.getNodeValue();
             }
@@ -203,7 +203,7 @@ class ElementModel extends NodeModel implements TemplateScalarModel {
         return result;
     }
     
-    private boolean isSignificantNode(Node node) throws TemplateModelException {
+    private boolean isSignificantNode(Node node) throws TemplateException {
         return (node.getNodeType() == Node.TEXT_NODE || node.getNodeType() == Node.CDATA_SECTION_NODE)
                 ? !isBlankXMLText(node.getTextContent())
                 : node.getNodeType() != Node.PROCESSING_INSTRUCTION_NODE && node.getNodeType() != Node.COMMENT_NODE;
@@ -229,6 +229,6 @@ class ElementModel extends NodeModel implements TemplateScalarModel {
     }
 
     boolean matchesName(String name, Environment env) {
-        return _StringUtil.matchesQName(name, getNodeName(), getNodeNamespace(), env);
+        return _StringUtils.matchesQName(name, getNodeName(), getNodeNamespace(), env);
     }
 }

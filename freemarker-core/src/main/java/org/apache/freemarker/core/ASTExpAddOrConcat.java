@@ -28,14 +28,13 @@ import org.apache.freemarker.core.model.TemplateHashModel;
 import org.apache.freemarker.core.model.TemplateHashModelEx;
 import org.apache.freemarker.core.model.TemplateMarkupOutputModel;
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateModelException;
 import org.apache.freemarker.core.model.TemplateModelIterator;
 import org.apache.freemarker.core.model.TemplateNumberModel;
-import org.apache.freemarker.core.model.TemplateScalarModel;
+import org.apache.freemarker.core.model.TemplateStringModel;
 import org.apache.freemarker.core.model.TemplateSequenceModel;
 import org.apache.freemarker.core.model.impl.CollectionAndSequence;
 import org.apache.freemarker.core.model.impl.SimpleNumber;
-import org.apache.freemarker.core.model.impl.SimpleScalar;
+import org.apache.freemarker.core.model.impl.SimpleString;
 
 /**
  * AST expression node: binary {@code +} operator. Note that this is treated separately from the other 4 arithmetic
@@ -68,68 +67,58 @@ final class ASTExpAddOrConcat extends ASTExpression {
             ASTExpression rightExp, TemplateModel rightModel)
             throws TemplateException {
         if (leftModel instanceof TemplateNumberModel && rightModel instanceof TemplateNumberModel) {
-            Number first = _EvalUtil.modelToNumber((TemplateNumberModel) leftModel, leftExp);
-            Number second = _EvalUtil.modelToNumber((TemplateNumberModel) rightModel, rightExp);
+            Number first = _EvalUtils.modelToNumber((TemplateNumberModel) leftModel, leftExp);
+            Number second = _EvalUtils.modelToNumber((TemplateNumberModel) rightModel, rightExp);
             return _evalOnNumbers(env, parent, first, second);
         } else if (leftModel instanceof TemplateSequenceModel && rightModel instanceof TemplateSequenceModel) {
             return new ConcatenatedSequence((TemplateSequenceModel) leftModel, (TemplateSequenceModel) rightModel);
         } else {
             boolean hashConcatPossible
                     = leftModel instanceof TemplateHashModel && rightModel instanceof TemplateHashModel;
-            try {
-                // We try string addition first. If hash addition is possible, then instead of throwing exception
-                // we return null and do hash addition instead. (We can't simply give hash addition a priority, like
-                // with sequence addition above, as FTL strings are often also FTL hashes.)
-                Object leftOMOrStr = _EvalUtil.coerceModelToStringOrMarkup(
-                        leftModel, leftExp, /* returnNullOnNonCoercableType = */ hashConcatPossible, null,
-                        env);
-                if (leftOMOrStr == null) {
-                    return _eval_concatenateHashes(leftModel, rightModel);
-                }
+            // We try string addition first. If hash addition is possible, then instead of throwing exception
+            // we return null and do hash addition instead. (We can't simply give hash addition a priority, like
+            // with sequence addition above, as FTL strings are often also FTL hashes.)
+            Object leftOMOrStr = _EvalUtils.coerceModelToStringOrMarkup(
+                    leftModel, leftExp, /* returnNullOnNonCoercableType = */ hashConcatPossible, null,
+                    env);
+            if (leftOMOrStr == null) {
+                return _eval_concatenateHashes(leftModel, rightModel);
+            }
 
-                // Same trick with null return as above.
-                Object rightOMOrStr = _EvalUtil.coerceModelToStringOrMarkup(
-                        rightModel, rightExp, /* returnNullOnNonCoercableType = */ hashConcatPossible, null,
-                        env);
-                if (rightOMOrStr == null) {
-                    return _eval_concatenateHashes(leftModel, rightModel);
-                }
+            // Same trick with null return as above.
+            Object rightOMOrStr = _EvalUtils.coerceModelToStringOrMarkup(
+                    rightModel, rightExp, /* returnNullOnNonCoercableType = */ hashConcatPossible, null,
+                    env);
+            if (rightOMOrStr == null) {
+                return _eval_concatenateHashes(leftModel, rightModel);
+            }
 
-                if (leftOMOrStr instanceof String) {
-                    if (rightOMOrStr instanceof String) {
-                        return new SimpleScalar(((String) leftOMOrStr).concat((String) rightOMOrStr));
-                    } else { // rightOMOrStr instanceof TemplateMarkupOutputModel
-                        TemplateMarkupOutputModel<?> rightMO = (TemplateMarkupOutputModel<?>) rightOMOrStr; 
-                        return _EvalUtil.concatMarkupOutputs(parent,
-                                rightMO.getOutputFormat().fromPlainTextByEscaping((String) leftOMOrStr),
-                                rightMO);
-                    }                    
-                } else { // leftOMOrStr instanceof TemplateMarkupOutputModel 
-                    TemplateMarkupOutputModel<?> leftMO = (TemplateMarkupOutputModel<?>) leftOMOrStr; 
-                    if (rightOMOrStr instanceof String) {  // markup output
-                        return _EvalUtil.concatMarkupOutputs(parent,
-                                leftMO,
-                                leftMO.getOutputFormat().fromPlainTextByEscaping((String) rightOMOrStr));
-                    } else { // rightOMOrStr instanceof TemplateMarkupOutputModel
-                        return _EvalUtil.concatMarkupOutputs(parent,
-                                leftMO,
-                                (TemplateMarkupOutputModel<?>) rightOMOrStr);
-                    }
+            if (leftOMOrStr instanceof String) {
+                if (rightOMOrStr instanceof String) {
+                    return new SimpleString(((String) leftOMOrStr).concat((String) rightOMOrStr));
+                } else { // rightOMOrStr instanceof TemplateMarkupOutputModel
+                    TemplateMarkupOutputModel<?> rightMO = (TemplateMarkupOutputModel<?>) rightOMOrStr;
+                    return _EvalUtils.concatMarkupOutputs(parent,
+                            rightMO.getOutputFormat().fromPlainTextByEscaping((String) leftOMOrStr),
+                            rightMO);
                 }
-            } catch (NonStringOrTemplateOutputException e) {
-                // 2.4: Remove this catch; it's for BC, after reworking hash addition so it doesn't rely on this. But
-                // user code might throws this (very unlikely), and then in 2.3.x we did catch that too, incorrectly.
-                if (hashConcatPossible) {
-                    return _eval_concatenateHashes(leftModel, rightModel);
-                } else {
-                    throw e;
+            } else { // leftOMOrStr instanceof TemplateMarkupOutputModel
+                TemplateMarkupOutputModel<?> leftMO = (TemplateMarkupOutputModel<?>) leftOMOrStr;
+                if (rightOMOrStr instanceof String) {  // markup output
+                    return _EvalUtils.concatMarkupOutputs(parent,
+                            leftMO,
+                            leftMO.getOutputFormat().fromPlainTextByEscaping((String) rightOMOrStr));
+                } else { // rightOMOrStr instanceof TemplateMarkupOutputModel
+                    return _EvalUtils.concatMarkupOutputs(parent,
+                            leftMO,
+                            (TemplateMarkupOutputModel<?>) rightOMOrStr);
                 }
             }
         }
     }
 
     private static TemplateModel _eval_concatenateHashes(TemplateModel leftModel, TemplateModel rightModel)
-            throws TemplateModelException {
+            throws TemplateException {
         if (leftModel instanceof TemplateHashModelEx && rightModel instanceof TemplateHashModelEx) {
             TemplateHashModelEx leftModelEx = (TemplateHashModelEx) leftModel;
             TemplateHashModelEx rightModelEx = (TemplateHashModelEx) rightModel;
@@ -148,7 +137,7 @@ final class ASTExpAddOrConcat extends ASTExpression {
 
     static TemplateModel _evalOnNumbers(Environment env, ASTNode parent, Number first, Number second)
             throws TemplateException {
-        ArithmeticEngine ae = _EvalUtil.getArithmeticEngine(env, parent);
+        ArithmeticEngine ae = _EvalUtils.getArithmeticEngine(env, parent);
         return new SimpleNumber(ae.add(first, second));
     }
 
@@ -203,13 +192,13 @@ final class ASTExpAddOrConcat extends ASTExpression {
 
         @Override
         public int size()
-        throws TemplateModelException {
+        throws TemplateException {
             return left.size() + right.size();
         }
 
         @Override
         public TemplateModel get(int i)
-        throws TemplateModelException {
+        throws TemplateException {
             int ls = left.size();
             return i < ls ? left.get(i) : right.get(i - ls);
         }
@@ -227,14 +216,14 @@ final class ASTExpAddOrConcat extends ASTExpression {
         
         @Override
         public TemplateModel get(String key)
-        throws TemplateModelException {
+        throws TemplateException {
             TemplateModel model = right.get(key);
             return (model != null) ? model : left.get(key);
         }
 
         @Override
         public boolean isEmpty()
-        throws TemplateModelException {
+        throws TemplateException {
             return left.isEmpty() && right.isEmpty();
         }
     }
@@ -251,27 +240,27 @@ final class ASTExpAddOrConcat extends ASTExpression {
         }
         
         @Override
-        public int size() throws TemplateModelException {
+        public int size() throws TemplateException {
             initKeys();
             return size;
         }
 
         @Override
         public TemplateCollectionModel keys()
-        throws TemplateModelException {
+        throws TemplateException {
             initKeys();
             return keys;
         }
 
         @Override
         public TemplateCollectionModel values()
-        throws TemplateModelException {
+        throws TemplateException {
             initValues();
             return values;
         }
 
         private void initKeys()
-        throws TemplateModelException {
+        throws TemplateException {
             if (keys == null) {
                 HashSet keySet = new HashSet();
                 NativeSequence keySeq = new NativeSequence(32);
@@ -283,10 +272,10 @@ final class ASTExpAddOrConcat extends ASTExpression {
         }
 
         private static void addKeys(Set set, NativeSequence keySeq, TemplateHashModelEx hash)
-        throws TemplateModelException {
+        throws TemplateException {
             TemplateModelIterator it = hash.keys().iterator();
             while (it.hasNext()) {
-                TemplateScalarModel tsm = (TemplateScalarModel) it.next();
+                TemplateStringModel tsm = (TemplateStringModel) it.next();
                 if (set.add(tsm.getAsString())) {
                     // The first occurence of the key decides the index;
                     // this is consisten with stuff like java.util.LinkedHashSet.
@@ -296,14 +285,14 @@ final class ASTExpAddOrConcat extends ASTExpression {
         }        
 
         private void initValues()
-        throws TemplateModelException {
+        throws TemplateException {
             if (values == null) {
                 NativeSequence seq = new NativeSequence(size());
                 // Note: size() invokes initKeys() if needed.
             
                 int ln = keys.size();
                 for (int i  = 0; i < ln; i++) {
-                    seq.add(get(((TemplateScalarModel) keys.get(i)).getAsString()));
+                    seq.add(get(((TemplateStringModel) keys.get(i)).getAsString()));
                 }
                 values = new CollectionAndSequence(seq);
             }

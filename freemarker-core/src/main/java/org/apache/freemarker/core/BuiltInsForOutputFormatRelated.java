@@ -49,7 +49,7 @@ class BuiltInsForOutputFormatRelated {
         @Override
         protected TemplateModel calculateResult(Environment env) throws TemplateException {
             TemplateModel lhoTM = target.eval(env);
-            Object lhoMOOrStr = _EvalUtil.coerceModelToStringOrMarkup(lhoTM, target, null, env);
+            Object lhoMOOrStr = _EvalUtils.coerceModelToStringOrMarkup(lhoTM, target, null, env);
             MarkupOutputFormat contextOF = outputFormat;
             if (lhoMOOrStr instanceof String) { // TemplateMarkupOutputModel
                 return calculateResult((String) lhoMOOrStr, contextOF, env);
@@ -64,7 +64,7 @@ class BuiltInsForOutputFormatRelated {
                     // ATTENTION: Keep this logic in sync. with ${...}'s logic!
                     String lhoPlainTtext = lhoOF.getSourcePlainText(lhoMO);
                     if (lhoPlainTtext == null) {
-                        throw new _TemplateModelException(target,
+                        throw new TemplateException(target,
                                 "The left side operand of ?", key, " is in ", new _DelayedToString(lhoOF),
                                 " format, which differs from the current output format, ",
                                 new _DelayedToString(contextOF), ". Conversion wasn't possible.");

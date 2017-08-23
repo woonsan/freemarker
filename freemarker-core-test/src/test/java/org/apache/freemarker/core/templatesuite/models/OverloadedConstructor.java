@@ -19,10 +19,9 @@
 
 package org.apache.freemarker.core.templatesuite.models;
 
-import org.apache.freemarker.core.model.TemplateModelException;
-import org.apache.freemarker.core.model.TemplateScalarModel;
+import org.apache.freemarker.core.model.TemplateStringModel;
 
-public class OverloadedConstructor implements TemplateScalarModel {
+public class OverloadedConstructor implements TemplateStringModel {
     
     String value;
     
@@ -39,7 +38,7 @@ public class OverloadedConstructor implements TemplateScalarModel {
     }
     
     @Override
-    public String getAsString() throws TemplateModelException {
+    public String getAsString() {
         return value;
     }
 

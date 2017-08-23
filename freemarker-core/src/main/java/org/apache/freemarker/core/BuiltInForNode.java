@@ -20,10 +20,10 @@
 package org.apache.freemarker.core;
 
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateModelException;
 import org.apache.freemarker.core.model.TemplateNodeModel;
 
 abstract class BuiltInForNode extends ASTExpBuiltIn {
+
     @Override
     TemplateModel _eval(Environment env)
             throws TemplateException {
@@ -31,9 +31,10 @@ abstract class BuiltInForNode extends ASTExpBuiltIn {
         if (model instanceof TemplateNodeModel) {
             return calculateResult((TemplateNodeModel) model, env);
         } else {
-            throw new NonNodeException(target, model, env);
+            throw MessageUtils.newUnexpectedOperandTypeException(target, model, TemplateNodeModel.class, env);
         }
     }
-    abstract TemplateModel calculateResult(TemplateNodeModel nodeModel, Environment env)
-            throws TemplateModelException;
+
+    abstract TemplateModel calculateResult(TemplateNodeModel nodeModel, Environment env) throws TemplateException;
+
 }

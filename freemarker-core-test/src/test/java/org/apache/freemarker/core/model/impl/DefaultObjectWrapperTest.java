@@ -41,27 +41,28 @@ import java.util.TreeSet;
 import java.util.Vector;
 
 import org.apache.freemarker.core.Configuration;
+import org.apache.freemarker.core.NonTemplateCallPlace;
 import org.apache.freemarker.core.Template;
 import org.apache.freemarker.core.TemplateException;
 import org.apache.freemarker.core.Version;
 import org.apache.freemarker.core._CoreAPI;
 import org.apache.freemarker.core.model.AdapterTemplateModel;
 import org.apache.freemarker.core.model.ObjectWrapper;
+import org.apache.freemarker.core.model.ObjectWrappingException;
 import org.apache.freemarker.core.model.TemplateBooleanModel;
 import org.apache.freemarker.core.model.TemplateCollectionModel;
 import org.apache.freemarker.core.model.TemplateCollectionModelEx;
 import org.apache.freemarker.core.model.TemplateHashModel;
 import org.apache.freemarker.core.model.TemplateHashModelEx;
-import org.apache.freemarker.core.model.TemplateMethodModelEx;
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateModelException;
 import org.apache.freemarker.core.model.TemplateModelIterator;
 import org.apache.freemarker.core.model.TemplateModelWithAPISupport;
 import org.apache.freemarker.core.model.TemplateNumberModel;
-import org.apache.freemarker.core.model.TemplateScalarModel;
+import org.apache.freemarker.core.model.TemplateStringModel;
 import org.apache.freemarker.core.model.TemplateSequenceModel;
 import org.apache.freemarker.core.model.WrapperTemplateModel;
 import org.apache.freemarker.core.model.WrappingTemplateModel;
+import org.apache.freemarker.core.util.CallableUtils;
 import org.apache.freemarker.test.TestConfigurationBuilder;
 import org.junit.Test;
 
@@ -167,7 +168,7 @@ public class DefaultObjectWrapperTest {
     
     
     @Test
-    public void testCustomization() throws TemplateModelException {
+    public void testCustomization() throws TemplateException {
         CustomizedDefaultObjectWrapper ow = new CustomizedDefaultObjectWrapper(Configuration.VERSION_3_0_0);
         assertEquals(Configuration.VERSION_3_0_0, ow.getIncompatibleImprovements());
 
@@ -176,7 +177,7 @@ public class DefaultObjectWrapperTest {
         assertEquals(11, ow.unwrap(seq.get(0)));
         assertEquals(22, ow.unwrap(seq.get(1)));
         
-        assertTrue(ow.wrap("x") instanceof SimpleScalar);
+        assertTrue(ow.wrap("x") instanceof SimpleString);
         assertTrue(ow.wrap(1.5) instanceof SimpleNumber);
         assertTrue(ow.wrap(new Date()) instanceof SimpleDate);
         assertEquals(TemplateBooleanModel.TRUE, ow.wrap(true));
@@ -185,22 +186,22 @@ public class DefaultObjectWrapperTest {
         assertTrue(ow.wrap(Collections.emptyList()) instanceof DefaultListAdapter);
         assertTrue(ow.wrap(new boolean[] { }) instanceof DefaultArrayAdapter);
         assertTrue(ow.wrap(new HashSet()) instanceof DefaultNonListCollectionAdapter);
-        assertTrue(ow.wrap('c') instanceof TemplateScalarModel); // BeanAndStringModel right now, but should change later
+        assertTrue(ow.wrap('c') instanceof TemplateStringModel); // BeanAndStringModel right now, but should change later
         
         TemplateHashModel bean = (TemplateHashModel) ow.wrap(new TestBean());
         assertEquals(1, ow.unwrap(bean.get("x")));
         {
             // Check method calls, and also if the return value is wrapped with the overidden "wrap".
-            final TemplateModel mr = (TemplateModel) ((TemplateMethodModelEx) bean.get("m")).exec(Collections.emptyList());
-            assertEquals(
-                    Collections.singletonList(1),
-                    ow.unwrap(mr));
+            final TemplateModel mr = ((JavaMethodModel) bean.get("m")).execute(
+                    CallableUtils.EMPTY_TEMPLATE_MODEL_ARRAY, NonTemplateCallPlace.INSTANCE);
+            assertEquals(Collections.singletonList(1), ow.unwrap(mr));
             assertTrue(DefaultListAdapter.class.isInstance(mr));
         }
         {
             // Check custom TM usage and round trip:
-            final TemplateModel mr = (TemplateModel) ((TemplateMethodModelEx) bean.get("incTupple"))
-                    .exec(Collections.singletonList(ow.wrap(new Tupple<>(1, 2))));
+            final TemplateModel mr = ((JavaMethodModel) bean.get("incTupple"))
+                    .execute(new TemplateModel[] { ow.wrap(new Tupple<>(1, 2)) },
+                            NonTemplateCallPlace.INSTANCE);
             assertEquals(new Tupple<>(2, 3), ow.unwrap(mr));
             assertTrue(TuppleAdapter.class.isInstance(mr));
         }
@@ -208,7 +209,7 @@ public class DefaultObjectWrapperTest {
 
     @SuppressWarnings("boxing")
     @Test
-    public void testCompositeValueWrapping() throws TemplateModelException, ClassNotFoundException {
+    public void testCompositeValueWrapping() throws TemplateException, ClassNotFoundException {
         DefaultObjectWrapper ow = new DefaultObjectWrapper.Builder(Configuration.VERSION_3_0_0).build();
 
         final Map hashMap = new HashMap();
@@ -246,7 +247,7 @@ public class DefaultObjectWrapperTest {
 
     @SuppressWarnings("boxing")
     @Test
-    public void testMapAdapter() throws TemplateModelException {
+    public void testMapAdapter() throws TemplateException {
         HashMap<String, Object> testMap = new LinkedHashMap<>();
         testMap.put("a", 1);
         testMap.put("b", null);
@@ -260,7 +261,7 @@ public class DefaultObjectWrapperTest {
             assertNull(hash.get("e"));
             assertEquals(1, ((TemplateNumberModel) hash.get("a")).getAsNumber());
             assertNull(hash.get("b"));
-            assertEquals("C", ((TemplateScalarModel) hash.get("c")).getAsString());
+            assertEquals("C", ((TemplateStringModel) hash.get("c")).getAsString());
             assertTrue(hash.get("d") instanceof DefaultListAdapter);
 
             assertCollectionTMEquals(hash.keys(), "a", "b", "c", "d");
@@ -275,7 +276,7 @@ public class DefaultObjectWrapperTest {
     }
 
     private void assertCollectionTMEquals(TemplateCollectionModel coll, Object... expectedItems)
-            throws TemplateModelException {
+            throws TemplateException {
         for (int i = 0; i < 2; i++) { // Run twice to check if we always get a new iterator
             int idx = 0;
             TemplateModelIterator it2 = null;
@@ -303,7 +304,7 @@ public class DefaultObjectWrapperTest {
 
     @SuppressWarnings("boxing")
     @Test
-    public void testListAdapter() throws TemplateModelException {
+    public void testListAdapter() throws TemplateException {
         {
             List testList = new ArrayList<>();
             testList.add(1);
@@ -318,7 +319,7 @@ public class DefaultObjectWrapperTest {
             assertNull(seq.get(-1));
             assertEquals(1, ((TemplateNumberModel) seq.get(0)).getAsNumber());
             assertNull(seq.get(1));
-            assertEquals("c", ((TemplateScalarModel) seq.get(2)).getAsString());
+            assertEquals("c", ((TemplateStringModel) seq.get(2)).getAsString());
             assertTrue(seq.get(3) instanceof DefaultArrayAdapter);
             assertNull(seq.get(4));
             
@@ -326,7 +327,7 @@ public class DefaultObjectWrapperTest {
         }
 
         {
-            List testList = new LinkedList<>();
+            List<Object> testList = new LinkedList<>();
             testList.add(1);
             testList.add(null);
             testList.add("c");
@@ -338,7 +339,7 @@ public class DefaultObjectWrapperTest {
             assertNull(seq.get(-1));
             assertEquals(1, ((TemplateNumberModel) seq.get(0)).getAsNumber());
             assertNull(seq.get(1));
-            assertEquals("c", ((TemplateScalarModel) seq.get(2)).getAsString());
+            assertEquals("c", ((TemplateStringModel) seq.get(2)).getAsString());
             assertNull(seq.get(3));
 
             assertCollectionTMEquals((TemplateCollectionModel) seq, 1, null, "c");
@@ -350,14 +351,14 @@ public class DefaultObjectWrapperTest {
             try {
                 it.next();
                 fail();
-            } catch (TemplateModelException e) {
+            } catch (TemplateException e) {
                 assertThat(e.getMessage(), containsString("no more"));
             }
         }
     }
 
     @Test
-    public void testArrayAdapterTypes() throws TemplateModelException {
+    public void testArrayAdapterTypes() throws ObjectWrappingException {
         assertArrayAdapterClass("Object", OW.wrap(new Object[] {}));
         assertArrayAdapterClass("Object", OW.wrap(new String[] {}));
         assertArrayAdapterClass("byte", OW.wrap(new byte[] {}));
@@ -378,16 +379,16 @@ public class DefaultObjectWrapperTest {
 
     @SuppressWarnings("boxing")
     @Test
-    public void testArrayAdapters() throws TemplateModelException {
+    public void testArrayAdapters() throws TemplateException {
         {
             final String[] testArray = new String[] { "a", null, "c" };
 
             TemplateSequenceModel seq = (TemplateSequenceModel) OW.wrap(testArray);
             assertEquals(3, seq.size());
             assertNull(seq.get(-1));
-            assertEquals("a", ((TemplateScalarModel) seq.get(0)).getAsString());
+            assertEquals("a", ((TemplateStringModel) seq.get(0)).getAsString());
             assertNull(seq.get(1));
-            assertEquals("c", ((TemplateScalarModel) seq.get(2)).getAsString());
+            assertEquals("c", ((TemplateStringModel) seq.get(2)).getAsString());
             assertNull(seq.get(3));
         }
 
@@ -426,8 +427,8 @@ public class DefaultObjectWrapperTest {
             TemplateSequenceModel seq = (TemplateSequenceModel) OW.wrap(testArray);
             assertEquals(2, seq.size());
             assertNull(seq.get(-1));
-            assertEquals("a", ((TemplateScalarModel) seq.get(0)).getAsString());
-            assertEquals("b", ((TemplateScalarModel) seq.get(1)).getAsString());
+            assertEquals("a", ((TemplateStringModel) seq.get(0)).getAsString());
+            assertEquals("b", ((TemplateStringModel) seq.get(1)).getAsString());
             assertNull(seq.get(2));
         }
     }
@@ -442,29 +443,29 @@ public class DefaultObjectWrapperTest {
     private void assertRoundtrip(DefaultObjectWrapper dow, Object obj, Class expectedTMClass,
             Class expectedPojoClass,
             String expectedPojoToString)
-            throws TemplateModelException {
+            throws TemplateException {
         final TemplateModel objTM = dow.wrap(obj);
         assertThat(objTM.getClass(), typeCompatibleWith(expectedTMClass));
 
         final TemplateHashModel testBeanTM = (TemplateHashModel) dow.wrap(new RoundtripTesterBean());
 
         {
-            TemplateMethodModelEx getClassM = (TemplateMethodModelEx) testBeanTM.get("getClass");
-            Object r = getClassM.exec(Collections.singletonList(objTM));
+            JavaMethodModel getClassM = (JavaMethodModel) testBeanTM.get("getClass");
+            TemplateModel r = getClassM.execute(new TemplateModel[] { objTM }, NonTemplateCallPlace.INSTANCE);
             final Class rClass = (Class) ((WrapperTemplateModel) r).getWrappedObject();
             assertThat(rClass, typeCompatibleWith(expectedPojoClass));
         }
 
         if (expectedPojoToString != null) {
-            TemplateMethodModelEx getToStringM = (TemplateMethodModelEx) testBeanTM.get("toString");
-            Object r = getToStringM.exec(Collections.singletonList(objTM));
-            assertEquals(expectedPojoToString, ((TemplateScalarModel) r).getAsString());
+            JavaMethodModel getToStringM = (JavaMethodModel) testBeanTM.get("toString");
+            TemplateModel r = getToStringM.execute(new TemplateModel[] { objTM }, NonTemplateCallPlace.INSTANCE);
+            assertEquals(expectedPojoToString, ((TemplateStringModel) r).getAsString());
         }
     }
 
     @SuppressWarnings("boxing")
     @Test
-    public void testCollectionAdapterBasics() throws TemplateModelException {
+    public void testCollectionAdapterBasics() throws TemplateException {
         {
             Set set = new TreeSet();
             set.add("a");
@@ -503,7 +504,7 @@ public class DefaultObjectWrapperTest {
 
     @SuppressWarnings("boxing")
     @Test
-    public void testCollectionAdapterOutOfBounds() throws TemplateModelException {
+    public void testCollectionAdapterOutOfBounds() throws TemplateException {
         Set set = Collections.singleton(123);
 
         TemplateCollectionModelEx coll = (TemplateCollectionModelEx) OW.wrap(set);
@@ -520,14 +521,14 @@ public class DefaultObjectWrapperTest {
             try {
                 it.next();
                 fail();
-            } catch (TemplateModelException e) {
+            } catch (TemplateException e) {
                 assertThat(e.getMessage(), containsStringIgnoringCase("no more"));
             }
         }
     }
 
     @Test
-    public void testCollectionAdapterAndNulls() throws TemplateModelException {
+    public void testCollectionAdapterAndNulls() throws TemplateException {
         Set set = new HashSet();
         set.add(null);
 
@@ -538,7 +539,7 @@ public class DefaultObjectWrapperTest {
     }
 
     @Test
-    public void testIteratorWrapping() throws TemplateModelException, ClassNotFoundException {
+    public void testIteratorWrapping() throws TemplateException, ClassNotFoundException {
         final List<String> list = ImmutableList.of("a", "b", "c");
         Iterator<String> it = list.iterator();
         TemplateCollectionModel coll = (TemplateCollectionModel) OW.wrap(it);
@@ -557,14 +558,14 @@ public class DefaultObjectWrapperTest {
         try {
             itIt.next();
             fail();
-        } catch (TemplateModelException e) {
+        } catch (TemplateException e) {
             assertThat(e.getMessage(), containsStringIgnoringCase("no more"));
         }
 
         try {
             itIt2.hasNext();
             fail();
-        } catch (TemplateModelException e) {
+        } catch (TemplateException e) {
             assertThat(e.getMessage(), containsString("can be listed only once"));
         }
 
@@ -572,25 +573,26 @@ public class DefaultObjectWrapperTest {
         try {
             itIt3.hasNext();
             fail();
-        } catch (TemplateModelException e) {
+        } catch (TemplateException e) {
             assertThat(e.getMessage(), containsString("can be listed only once"));
         }
     }
 
     @Test
-    public void testIteratorApiSupport() throws TemplateModelException {
+    public void testIteratorApiSupport() throws TemplateException {
         TemplateModel wrappedIterator = OW.wrap(Collections.emptyIterator());
         assertThat(wrappedIterator, instanceOf(DefaultIteratorAdapter.class));
         DefaultIteratorAdapter iteratorAdapter = (DefaultIteratorAdapter) wrappedIterator;
 
         TemplateHashModel api = (TemplateHashModel) iteratorAdapter.getAPI();
-        assertFalse(((TemplateBooleanModel) ((TemplateMethodModelEx)
-                api.get("hasNext")).exec(Collections.emptyList())).getAsBoolean());
+        assertFalse(((TemplateBooleanModel) ((JavaMethodModel)
+                api.get("hasNext")).execute(CallableUtils.EMPTY_TEMPLATE_MODEL_ARRAY, NonTemplateCallPlace.INSTANCE))
+                .getAsBoolean());
     }
 
     @SuppressWarnings("boxing")
     @Test
-    public void testCharKeyFallback() throws TemplateModelException {
+    public void testCharKeyFallback() throws TemplateException {
         Map hashMapS = new HashMap<>();
         hashMapS.put("a", 1);
         Map sortedMapS = new TreeMap<>();
@@ -605,7 +607,7 @@ public class DefaultObjectWrapperTest {
         assertEquals(1, OW.unwrap(((TemplateHashModel) OW.wrap(sortedMapS)).get("a")));
         try {
             ((TemplateHashModel) OW.wrap(sortedMapC)).get("a");
-        } catch (TemplateModelException e) {
+        } catch (TemplateException e) {
             assertThat(e.getMessage(), containsStringIgnoringCase("String key"));
         }
         
@@ -614,7 +616,7 @@ public class DefaultObjectWrapperTest {
         assertNull(((TemplateHashModel) OW.wrap(sortedMapS)).get("b"));
         try {
             ((TemplateHashModel) OW.wrap(sortedMapC)).get("b");
-        } catch (TemplateModelException e) {
+        } catch (TemplateException e) {
             assertThat(e.getMessage(), containsStringIgnoringCase("String key"));
         }
     }
@@ -642,7 +644,7 @@ public class DefaultObjectWrapperTest {
             try {
                 iteratorTM.next();
                 fail();
-            } catch (TemplateModelException e) {
+            } catch (TemplateException e) {
                 assertThat(e.getMessage(), containsStringIgnoringCase("no more"));
             }
         }
@@ -651,7 +653,7 @@ public class DefaultObjectWrapperTest {
     }
 
     @Test
-    public void testEnumerationAdapter() throws TemplateModelException {
+    public void testEnumerationAdapter() throws TemplateException {
         Vector<String> vector = new Vector<String>();
         vector.add("a");
         vector.add("b");
@@ -661,9 +663,9 @@ public class DefaultObjectWrapperTest {
         DefaultEnumerationAdapter enumAdapter = (DefaultEnumerationAdapter) wrappedEnumeration;
         TemplateModelIterator iterator = enumAdapter.iterator();
         assertTrue(iterator.hasNext());
-        assertEquals("a", ((TemplateScalarModel) iterator.next()).getAsString());
+        assertEquals("a", ((TemplateStringModel) iterator.next()).getAsString());
         assertTrue(iterator.hasNext());
-        assertEquals("b", ((TemplateScalarModel) iterator.next()).getAsString());
+        assertEquals("b", ((TemplateStringModel) iterator.next()).getAsString());
         assertFalse(iterator.hasNext());
 
         iterator = enumAdapter.iterator();
@@ -674,8 +676,8 @@ public class DefaultObjectWrapperTest {
         }
 
         TemplateHashModel api = (TemplateHashModel) enumAdapter.getAPI();
-        assertFalse(((TemplateBooleanModel) ((TemplateMethodModelEx)
-                api.get("hasMoreElements")).exec(Collections.emptyList())).getAsBoolean());
+        assertFalse(((TemplateBooleanModel) ((JavaMethodModel) api.get("hasMoreElements"))
+                .execute(CallableUtils.EMPTY_TEMPLATE_MODEL_ARRAY, NonTemplateCallPlace.INSTANCE)).getAsBoolean());
     }
 
     @Test
@@ -719,19 +721,20 @@ public class DefaultObjectWrapperTest {
         }
     }
 
-    private TemplateHashModel wrapWithExposureLevel(Object bean, int exposureLevel) throws TemplateModelException {
+    private TemplateHashModel wrapWithExposureLevel(Object bean, int exposureLevel) throws ObjectWrappingException {
         return (TemplateHashModel) new DefaultObjectWrapper.Builder(Configuration.VERSION_3_0_0)
                 .exposureLevel(exposureLevel).build()
                 .wrap(bean);
     }
 
-    private void assertSizeThroughAPIModel(int expectedSize, TemplateModel normalModel) throws TemplateModelException {
+    private void assertSizeThroughAPIModel(int expectedSize, TemplateModel normalModel) throws TemplateException {
         if (!(normalModel instanceof TemplateModelWithAPISupport)) {
             fail(); 
         }
         TemplateHashModel apiModel = (TemplateHashModel) ((TemplateModelWithAPISupport) normalModel).getAPI();
-        TemplateMethodModelEx sizeMethod = (TemplateMethodModelEx) apiModel.get("size");
-        TemplateNumberModel r = (TemplateNumberModel) sizeMethod.exec(Collections.emptyList());
+        JavaMethodModel sizeMethod = (JavaMethodModel) apiModel.get("size");
+        TemplateNumberModel r = (TemplateNumberModel) sizeMethod.execute(
+                CallableUtils.EMPTY_TEMPLATE_MODEL_ARRAY, NonTemplateCallPlace.INSTANCE);
         assertEquals(expectedSize, r.getAsNumber().intValue());
     }
 
@@ -848,7 +851,7 @@ public class DefaultObjectWrapperTest {
         }
         
         @Override
-        protected TemplateModel wrapGenericObject(final Object obj) throws TemplateModelException {
+        protected TemplateModel wrapGenericObject(final Object obj) throws ObjectWrappingException {
             if (obj instanceof Tupple) {
                 return new TuppleAdapter((Tupple<?, ?>) obj, this);
             }
@@ -869,12 +872,12 @@ public class DefaultObjectWrapperTest {
         }
 
         @Override
-        public int size() throws TemplateModelException {
+        public int size() throws TemplateException {
             return 2;
         }
         
         @Override
-        public TemplateModel get(int index) throws TemplateModelException {
+        public TemplateModel get(int index) throws TemplateException {
             switch (index) {
             case 0: return wrap(tupple.getE1());
             case 1: return wrap(tupple.getE2());

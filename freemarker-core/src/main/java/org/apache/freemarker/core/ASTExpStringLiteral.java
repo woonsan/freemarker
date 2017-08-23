@@ -24,15 +24,15 @@ import java.util.List;
 
 import org.apache.freemarker.core.model.TemplateMarkupOutputModel;
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateScalarModel;
-import org.apache.freemarker.core.model.impl.SimpleScalar;
+import org.apache.freemarker.core.model.TemplateStringModel;
+import org.apache.freemarker.core.model.impl.SimpleString;
 import org.apache.freemarker.core.outputformat.OutputFormat;
-import org.apache.freemarker.core.util.FTLUtil;
+import org.apache.freemarker.core.util.TemplateLanguageUtils;
 
 /**
  * AST expression node: string literal
  */
-final class ASTExpStringLiteral extends ASTExpression implements TemplateScalarModel {
+final class ASTExpStringLiteral extends ASTExpression implements TemplateStringModel {
     
     private final String value;
     
@@ -87,7 +87,7 @@ final class ASTExpStringLiteral extends ASTExpression implements TemplateScalarM
     @Override
     TemplateModel _eval(Environment env) throws TemplateException {
         if (dynamicValue == null) {
-            return new SimpleScalar(value);
+            return new SimpleString(value);
         } else {
             // This should behave like concatenating the values with `+`. Thus, an interpolated expression that
             // returns markup promotes the result of the whole expression to markup.
@@ -105,7 +105,7 @@ final class ASTExpStringLiteral extends ASTExpression implements TemplateScalarM
                     TemplateMarkupOutputModel<?> partMO = calcedPart instanceof String
                             ? markupResult.getOutputFormat().fromPlainTextByEscaping((String) calcedPart)
                             : (TemplateMarkupOutputModel<?>) calcedPart;
-                    markupResult = _EvalUtil.concatMarkupOutputs(this, markupResult, partMO);
+                    markupResult = _EvalUtils.concatMarkupOutputs(this, markupResult, partMO);
                 } else { // We are using `plainTextOutput` (or nothing yet)
                     if (calcedPart instanceof String) {
                         String partStr = (String) calcedPart;
@@ -119,7 +119,7 @@ final class ASTExpStringLiteral extends ASTExpression implements TemplateScalarM
                         if (plainTextResult != null) {
                             TemplateMarkupOutputModel<?> leftHandMO = moPart.getOutputFormat()
                                     .fromPlainTextByEscaping(plainTextResult.toString());
-                            markupResult = _EvalUtil.concatMarkupOutputs(this, leftHandMO, moPart);
+                            markupResult = _EvalUtils.concatMarkupOutputs(this, leftHandMO, moPart);
                             plainTextResult = null;
                         } else {
                             markupResult = moPart;
@@ -128,8 +128,8 @@ final class ASTExpStringLiteral extends ASTExpression implements TemplateScalarM
                 }
             } // for each part
             return markupResult != null ? markupResult
-                    : plainTextResult != null ? new SimpleScalar(plainTextResult.toString())
-                    : SimpleScalar.EMPTY_STRING;
+                    : plainTextResult != null ? new SimpleString(plainTextResult.toString())
+                    : SimpleString.EMPTY_STRING;
         }
     }
 
@@ -149,7 +149,7 @@ final class ASTExpStringLiteral extends ASTExpression implements TemplateScalarM
     @Override
     public String getCanonicalForm() {
         if (dynamicValue == null) {
-            return FTLUtil.toStringLiteral(value);
+            return TemplateLanguageUtils.toStringLiteral(value);
         } else {
             StringBuilder sb = new StringBuilder();
             sb.append('"');
@@ -157,7 +157,7 @@ final class ASTExpStringLiteral extends ASTExpression implements TemplateScalarM
                 if (child instanceof ASTInterpolation) {
                     sb.append(((ASTInterpolation) child).getCanonicalFormInStringLiteral());
                 } else {
-                    sb.append(FTLUtil.escapeStringLiteralPart((String) child, '"'));
+                    sb.append(TemplateLanguageUtils.escapeStringLiteralPart((String) child, '"'));
                 }
             }
             sb.append('"');

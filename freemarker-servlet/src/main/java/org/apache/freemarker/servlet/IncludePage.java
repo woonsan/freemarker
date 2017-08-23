@@ -36,16 +36,16 @@ import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpServletResponseWrapper;
 
+import org.apache.freemarker.core.CallPlace;
 import org.apache.freemarker.core.Environment;
 import org.apache.freemarker.core.TemplateException;
-import org.apache.freemarker.core._DelayedFTLTypeDescription;
-import org.apache.freemarker.core._MiscTemplateException;
+import org.apache.freemarker.core.model.ArgumentArrayLayout;
 import org.apache.freemarker.core.model.TemplateBooleanModel;
-import org.apache.freemarker.core.model.TemplateDirectiveBody;
 import org.apache.freemarker.core.model.TemplateDirectiveModel;
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateScalarModel;
+import org.apache.freemarker.core.util.CallableUtils;
 import org.apache.freemarker.core.util.DeepUnwrap;
+import org.apache.freemarker.core.util.StringToIndexMap;
 
 
 /**
@@ -60,32 +60,38 @@ import org.apache.freemarker.core.util.DeepUnwrap;
  * values of parameters.
  */
 public class IncludePage implements TemplateDirectiveModel {
+
     private final HttpServletRequest request;
     private final HttpServletResponse response;
+
+    private static final int PATH_PARAM_IDX = 0;
+    private static final int INHERIT_PARAMS_PARAM_IDX = 1;
+    private static final int PARAMS_PARAM_IDX = 2;
+
+    private static final String PATH_PARAM_NAME = "path";
+    private static final String INHERIT_PARAMS_PARAM_NAME = "inherit_params";
+    private static final String PARAMS_PARAM_NAME = "params";
+
+    private static final ArgumentArrayLayout ARGS_LAYOUT = ArgumentArrayLayout.create(
+            0,
+            false,
+            StringToIndexMap.of(
+                    PATH_PARAM_NAME, PATH_PARAM_IDX,
+                    INHERIT_PARAMS_PARAM_NAME, INHERIT_PARAMS_PARAM_IDX
+            ),
+            false
+    );
     
     public IncludePage(HttpServletRequest request, HttpServletResponse response) {
         this.request = request;
         this.response = response;
     }
-    
+
     @Override
-    public void execute(final Environment env, Map params,
-                        TemplateModel[] loopVars, TemplateDirectiveBody body)
-    throws TemplateException, IOException {
-        // Determine the path
-        final TemplateModel path = (TemplateModel) params.get("path");
-        if (path == null) {
-            throw new _MiscTemplateException(env, "Missing required parameter \"path\"");
-        }
-        if (!(path instanceof TemplateScalarModel)) {
-            throw new _MiscTemplateException(env,
-                    "Expected a scalar model. \"path\" is instead ", new _DelayedFTLTypeDescription(path));
-        }
-        final String strPath = ((TemplateScalarModel) path).getAsString();
-        if (strPath == null) {
-            throw new _MiscTemplateException(env, "String value of \"path\" parameter is null");
-        }
-        
+    public void execute(TemplateModel[] args, CallPlace callPlace, Writer out, Environment env)
+            throws TemplateException, IOException {
+        final String strPath = CallableUtils.getStringArgument(args, PARAMS_PARAM_IDX, this);
+
         // See whether we need to use a custom response (if we're inside a TTM
         // or TDM or macro nested body, we'll need to as then the current 
         // FM environment writer is not identical to HTTP servlet response 
@@ -113,21 +119,21 @@ public class IncludePage implements TemplateDirectiveModel {
 
         // Determine inherit_params value
         final boolean inheritParams;
-        final TemplateModel inheritParamsModel = (TemplateModel) params.get("inherit_params");
+        final TemplateModel inheritParamsModel = args[INHERIT_PARAMS_PARAM_IDX];
         if (inheritParamsModel == null) {
             // defaults to true when not specified
             inheritParams = true; 
         } else {
             if (!(inheritParamsModel instanceof TemplateBooleanModel)) {
-                throw new _MiscTemplateException(env,
-                        "\"inherit_params\" should be a boolean but it's a(n) ",
+                throw new TemplateException(env,
+                        "\"", INHERIT_PARAMS_PARAM_NAME, "\" should be a boolean but it's a(n) ",
                         inheritParamsModel.getClass().getName(), " instead");
             }
             inheritParams = ((TemplateBooleanModel) inheritParamsModel).getAsBoolean();
         }
         
         // Get explicit params, if any
-        final TemplateModel paramsModel = (TemplateModel) params.get("params");
+        final TemplateModel paramsModel = args[PARAMS_PARAM_IDX];
         
         // Determine whether we need to wrap the request
         final HttpServletRequest wrappedRequest;
@@ -142,8 +148,8 @@ public class IncludePage implements TemplateDirectiveModel {
                 // Convert params to a Map
                 final Object unwrapped = DeepUnwrap.unwrap(paramsModel);
                 if (!(unwrapped instanceof Map)) {
-                    throw new _MiscTemplateException(env,
-                            "Expected \"params\" to unwrap into a java.util.Map. It unwrapped into ",
+                    throw new TemplateException(env,
+                            "Expected \"", PARAMS_PARAM_NAME, "\" to unwrap into a java.util.Map. It unwrapped into ",
                             unwrapped.getClass().getName(), " instead.");
                 }
                 paramsMap = (Map) unwrapped;
@@ -159,8 +165,18 @@ public class IncludePage implements TemplateDirectiveModel {
             request.getRequestDispatcher(strPath).include(wrappedRequest, 
                     wrappedResponse);
         } catch (ServletException e) {
-            throw new _MiscTemplateException(e, env);
+            throw new TemplateException(e, env);
         }
+    }
+
+    @Override
+    public ArgumentArrayLayout getDirectiveArgumentArrayLayout() {
+        return ARGS_LAYOUT;
+    }
+
+    @Override
+    public boolean isNestedContentSupported() {
+        return false;
     }
 
     private static final class CustomParamsRequest extends HttpServletRequestWrapper {

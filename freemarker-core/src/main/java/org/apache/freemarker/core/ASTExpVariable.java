@@ -20,7 +20,7 @@
 package org.apache.freemarker.core;
 
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.util._StringUtil;
+import org.apache.freemarker.core.util._StringUtils;
 
 /**
  * AST expression node: Reference to a "top-level" (local, current namespace, global, data-model) variable
@@ -39,7 +39,7 @@ final class ASTExpVariable extends ASTExpression {
             return env.getVariable(name);
         } catch (NullPointerException e) {
             if (env == null) {
-                throw new _MiscTemplateException(
+                throw new TemplateException(
                         "Variables are not available (certainly you are in a parse-time executed directive). "
                         + "The name of the variable you tried to read: ", name);
             } else {
@@ -50,7 +50,7 @@ final class ASTExpVariable extends ASTExpression {
 
     @Override
     public String getCanonicalForm() {
-        return _StringUtil.toFTLTopLevelIdentifierReference(name);
+        return _StringUtils.toFTLTopLevelIdentifierReference(name);
     }
     
     /**

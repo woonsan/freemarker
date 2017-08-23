@@ -22,7 +22,7 @@ package org.apache.freemarker.core;
 import java.io.IOException;
 
 import org.apache.freemarker.core.templateresolver.MalformedTemplateNameException;
-import org.apache.freemarker.core.util._StringUtil;
+import org.apache.freemarker.core.util._StringUtils;
 
 /**
  * AST directive node: {@code #import}
@@ -51,7 +51,7 @@ final class ASTDirImport extends ASTDirective {
         try {
             fullImportedTemplateName = env.toFullTemplateName(getTemplate().getLookupName(), importedTemplateName);
         } catch (MalformedTemplateNameException e) {
-            throw new _MiscTemplateException(e, env,
+            throw new TemplateException(e, env,
                     "Malformed template name ", new _DelayedJQuote(e.getTemplateName()), ":\n",
                     e.getMalformednessDescription());
         }
@@ -59,7 +59,7 @@ final class ASTDirImport extends ASTDirective {
         try {
             env.importLib(fullImportedTemplateName, targetNsVarName);
         } catch (IOException e) {
-            throw new _MiscTemplateException(e, env,
+            throw new TemplateException(e, env,
                     "Template importing failed (for parameter value ",
                     new _DelayedJQuote(importedTemplateName),
                     "):\n", new _DelayedGetMessage(e));
@@ -75,7 +75,7 @@ final class ASTDirImport extends ASTDirective {
         buf.append(' ');
         buf.append(importedTemplateNameExp.getCanonicalForm());
         buf.append(" as ");
-        buf.append(_StringUtil.toFTLTopLevelTragetIdentifier(targetNsVarName));
+        buf.append(_StringUtils.toFTLTopLevelTragetIdentifier(targetNsVarName));
         if (canonical) buf.append("/>");
         return buf.toString();
     }

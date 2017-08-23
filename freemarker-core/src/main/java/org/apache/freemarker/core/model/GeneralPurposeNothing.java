@@ -19,7 +19,9 @@
 
 package org.apache.freemarker.core.model;
 
-import java.util.List;
+import org.apache.freemarker.core.CallPlace;
+import org.apache.freemarker.core.Environment;
+import org.apache.freemarker.core.TemplateException;
 
 /**
  * Singleton object representing nothing, used by ?if_exists built-in.
@@ -28,10 +30,15 @@ import java.util.List;
  */
 
 final class GeneralPurposeNothing
-implements TemplateBooleanModel, TemplateScalarModel, TemplateSequenceModel, TemplateHashModelEx, TemplateMethodModelEx {
+implements TemplateBooleanModel, TemplateStringModel, TemplateSequenceModel, TemplateHashModelEx2,
+        TemplateFunctionModel {
 
     public static final TemplateModel INSTANCE = new GeneralPurposeNothing();
-      
+
+    private static final ArgumentArrayLayout ARGS_LAYOUT = ArgumentArrayLayout.create(
+            0, true,
+            null, true);
+
     private GeneralPurposeNothing() {
     }
 
@@ -56,8 +63,8 @@ implements TemplateBooleanModel, TemplateScalarModel, TemplateSequenceModel, Tem
     }
 
     @Override
-    public TemplateModel get(int i) throws TemplateModelException {
-        throw new TemplateModelException("Empty list");
+    public TemplateModel get(int i) throws TemplateException {
+        throw new TemplateException("Can't get item from an empty sequence.");
     }
 
     @Override
@@ -66,18 +73,28 @@ implements TemplateBooleanModel, TemplateScalarModel, TemplateSequenceModel, Tem
     }
 
     @Override
-    public Object exec(List args) {
+    public TemplateModel execute(TemplateModel[] args, CallPlace callPlace, Environment env) throws TemplateException {
         return null;
     }
-    
+
+    @Override
+    public ArgumentArrayLayout getFunctionArgumentArrayLayout() {
+        return ARGS_LAYOUT;
+    }
+
     @Override
     public TemplateCollectionModel keys() {
-        return Constants.EMPTY_COLLECTION;
+        return TemplateCollectionModel.EMPTY_COLLECTION;
     }
 
     @Override
     public TemplateCollectionModel values() {
-        return Constants.EMPTY_COLLECTION;
+        return TemplateCollectionModel.EMPTY_COLLECTION;
+    }
+
+    @Override
+    public KeyValuePairIterator keyValuePairIterator() throws TemplateException {
+        return EmptyKeyValuePairIterator.EMPTY_KEY_VALUE_PAIR_ITERATOR;
     }
 
 }

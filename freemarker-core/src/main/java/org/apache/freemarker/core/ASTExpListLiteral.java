@@ -25,8 +25,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.ListIterator;
 
-import org.apache.freemarker.core.model.TemplateMethodModel;
-import org.apache.freemarker.core.model.TemplateMethodModelEx;
+import org.apache.freemarker.core.model.TemplateFunctionModel;
 import org.apache.freemarker.core.model.TemplateModel;
 import org.apache.freemarker.core.model.TemplateSequenceModel;
 
@@ -55,37 +54,14 @@ final class ASTExpListLiteral extends ASTExpression {
     }
 
     /**
-     * For {@link TemplateMethodModel} calls, but not for {@link TemplateMethodModelEx}-es, returns the list of
-     * arguments as {@link String}-s.
+     * For {@link TemplateFunctionModel} calls, returns the list of arguments as {@link TemplateModel}-s.
      */
-    List/*<String>*/ getValueList(Environment env) throws TemplateException {
+    // TODO [FM3][CF] This will be removed
+    List<TemplateModel> getModelList(Environment env) throws TemplateException {
         int size = items.size();
         switch(size) {
             case 0: {
-                return Collections.EMPTY_LIST;
-            }
-            case 1: {
-                return Collections.singletonList(((ASTExpression) items.get(0)).evalAndCoerceToPlainText(env));
-            }
-            default: {
-                List result = new ArrayList(items.size());
-                for (ListIterator iterator = items.listIterator(); iterator.hasNext(); ) {
-                    ASTExpression exp = (ASTExpression) iterator.next();
-                    result.add(exp.evalAndCoerceToPlainText(env));
-                }
-                return result;
-            }
-        }
-    }
-
-    /**
-     * For {@link TemplateMethodModelEx} calls, returns the list of arguments as {@link TemplateModel}-s.
-     */
-    List/*<TemplateModel>*/ getModelList(Environment env) throws TemplateException {
-        int size = items.size();
-        switch(size) {
-            case 0: {
-                return Collections.EMPTY_LIST;
+                return Collections.emptyList();
             }
             case 1: {
                 return Collections.singletonList(((ASTExpression) items.get(0)).eval(env));
@@ -99,6 +75,10 @@ final class ASTExpListLiteral extends ASTExpression {
                 return result;
             }
         }
+    }
+
+    public int size() {
+        return items.size();
     }
 
     @Override
@@ -147,7 +127,7 @@ final class ASTExpListLiteral extends ASTExpression {
                     Environment.Namespace ns = env.importLib(s, null);
                     result.add(ns);
                 } catch (IOException ioe) {
-                    throw new _MiscTemplateException(((ASTExpStringLiteral) itemExpr),
+                    throw new TemplateException(((ASTExpStringLiteral) itemExpr),
                             "Couldn't import library ", new _DelayedJQuote(s), ": ",
                             new _DelayedGetMessage(ioe));
                 }

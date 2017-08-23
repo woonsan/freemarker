@@ -22,7 +22,7 @@ package org.apache.freemarker.core.templatesuite.models;
 import org.apache.freemarker.core.model.TemplateBooleanModel;
 import org.apache.freemarker.core.model.TemplateHashModel;
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.impl.SimpleScalar;
+import org.apache.freemarker.core.model.impl.SimpleString;
 
 /**
  * Tests the impact that the isEmpty() has on template hash models.
@@ -40,11 +40,11 @@ public class BooleanHash1 implements TemplateHashModel {
     @Override
     public TemplateModel get(String key) {
         if ( key.equals( "temp" )) {
-            return new SimpleScalar( "Hello, world." );
+            return new SimpleString( "Hello, world." );
         } else if ( key.equals( "boolean" )) {
             return TemplateBooleanModel.FALSE;
         } else {
-            return new SimpleScalar( "Just another key..." );
+            return new SimpleString( "Just another key..." );
         }
     }
 

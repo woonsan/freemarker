@@ -45,6 +45,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.freemarker.core.arithmetic.ArithmeticEngine;
 import org.apache.freemarker.core.debug._DebuggerService;
 import org.apache.freemarker.core.model.ObjectWrapper;
+import org.apache.freemarker.core.model.ObjectWrappingException;
 import org.apache.freemarker.core.model.TemplateHashModel;
 import org.apache.freemarker.core.model.TemplateModel;
 import org.apache.freemarker.core.model.TemplateNodeModel;
@@ -55,7 +56,7 @@ import org.apache.freemarker.core.templateresolver.TemplateLookupStrategy;
 import org.apache.freemarker.core.templateresolver.impl.DefaultTemplateResolver;
 import org.apache.freemarker.core.templateresolver.impl.FileTemplateLoader;
 import org.apache.freemarker.core.util.BugException;
-import org.apache.freemarker.core.util._CollectionUtil;
+import org.apache.freemarker.core.util._CollectionUtils;
 import org.apache.freemarker.core.util._NullArgumentException;
 import org.apache.freemarker.core.valueformat.TemplateDateFormatFactory;
 import org.apache.freemarker.core.valueformat.TemplateNumberFormatFactory;
@@ -332,8 +333,8 @@ public class Template implements ProcessingConfiguration, CustomStateScope {
         ltbReader.throwFailure();
         
         _DebuggerService.registerTemplate(this);
-        namespaceURIToPrefixLookup = _CollectionUtil.unmodifiableMap(namespaceURIToPrefixLookup);
-        prefixToNamespaceURILookup = _CollectionUtil.unmodifiableMap(prefixToNamespaceURILookup);
+        namespaceURIToPrefixLookup = _CollectionUtils.unmodifiableMap(namespaceURIToPrefixLookup);
+        prefixToNamespaceURILookup = _CollectionUtils.unmodifiableMap(prefixToNamespaceURILookup);
 
        finishConstruction();
    }
@@ -343,8 +344,8 @@ public class Template implements ProcessingConfiguration, CustomStateScope {
      * protected when construction is done.
      */
     private void finishConstruction() {
-        headerCustomSettings = _CollectionUtil.unmodifiableMap(headerCustomSettings);
-        tcAndHeaderCustomSettings = _CollectionUtil.unmodifiableMap(tcAndHeaderCustomSettings);
+        headerCustomSettings = _CollectionUtils.unmodifiableMap(headerCustomSettings);
+        tcAndHeaderCustomSettings = _CollectionUtils.unmodifiableMap(tcAndHeaderCustomSettings);
         writeProtected = true;
     }
 
@@ -411,9 +412,11 @@ public class Template implements ProcessingConfiguration, CustomStateScope {
      *            {@link ProcessingConfiguration#getAutoFlush() autoFlush} to {@code false} to disable this,
      *            {@link Writer#flush()} will be called at the when the template processing was finished.
      *            {@link Writer#close()} is not called. Can't be {@code null}.
-     * 
+     *
      * @throws TemplateException
      *             if an exception occurs during template processing
+     * @throws ObjectWrappingException
+     *             if the {@code dataModel} couldn't be wrapped; note that this extends {@link TemplateException}
      * @throws IOException
      *             if an I/O exception occurs during writing to the writer.
      */
@@ -429,9 +432,6 @@ public class Template implements ProcessingConfiguration, CustomStateScope {
      * typical example of recursive node processing.
      * 
      * @param rootNode The root node for recursive processing or {@code null}.
-     * 
-     * @throws TemplateException if an exception occurs during template processing
-     * @throws IOException if an I/O exception occurs during writing to the writer.
      */
     public void process(Object dataModel, Writer out, ObjectWrapper wrapper, TemplateNodeModel rootNode)
     throws TemplateException, IOException {
@@ -495,9 +495,13 @@ public class Template implements ProcessingConfiguration, CustomStateScope {
     *     
     * @return the {@link Environment} object created for processing. Call {@link Environment#process()} to process the
     *    template.
-    * 
-    * @throws TemplateException if an exception occurs while setting up the Environment object.
-    * @throws IOException if an exception occurs doing any auto-imports
+    *
+    * @throws TemplateException
+    *             if an exception occurs during template processing
+    * @throws ObjectWrappingException
+    *             if the {@code dataModel} couldn't be wrapped; note that this extends {@link TemplateException}
+    * @throws IOException
+    *             if an I/O exception occurs during writing to the writer.
     */
     public Environment createProcessingEnvironment(Object dataModel, Writer out, ObjectWrapper wrapper)
     throws TemplateException, IOException {
@@ -735,7 +739,7 @@ public class Template implements ProcessingConfiguration, CustomStateScope {
         out.write(rootElement != null ? rootElement.getCanonicalForm() : "Unfinished template");
     }
 
-    void addMacro(ASTDirMacro macro) {
+    void addMacro(ASTDirMacroOrFunction macro) {
         macros.put(macro.getName(), macro);
     }
 

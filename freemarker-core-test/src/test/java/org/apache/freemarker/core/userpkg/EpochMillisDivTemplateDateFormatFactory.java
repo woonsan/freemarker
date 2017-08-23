@@ -23,9 +23,9 @@ import java.util.Locale;
 import java.util.TimeZone;
 
 import org.apache.freemarker.core.Environment;
+import org.apache.freemarker.core.TemplateException;
 import org.apache.freemarker.core.model.TemplateDateModel;
-import org.apache.freemarker.core.model.TemplateModelException;
-import org.apache.freemarker.core.util._StringUtil;
+import org.apache.freemarker.core.util._StringUtils;
 import org.apache.freemarker.core.valueformat.InvalidFormatParametersException;
 import org.apache.freemarker.core.valueformat.TemplateDateFormat;
 import org.apache.freemarker.core.valueformat.TemplateDateFormatFactory;
@@ -54,7 +54,7 @@ public class EpochMillisDivTemplateDateFormatFactory extends TemplateDateFormatF
                         "A format parameter is required, which specifies the divisor.");
             }
             throw new InvalidFormatParametersException(
-                    "The format paramter must be an integer, but was (shown quoted): " + _StringUtil.jQuote(params));
+                    "The format paramter must be an integer, but was (shown quoted): " + _StringUtils.jQuote(params));
         }
         return new EpochMillisDivTemplateDateFormat(divisor);
     }
@@ -69,7 +69,7 @@ public class EpochMillisDivTemplateDateFormatFactory extends TemplateDateFormatF
         
         @Override
         public String formatToPlainText(TemplateDateModel dateModel)
-                throws UnformattableValueException, TemplateModelException {
+                throws UnformattableValueException, TemplateException {
             return String.valueOf(TemplateFormatUtil.getNonNullDate(dateModel).getTime() / divisor);
         }
 

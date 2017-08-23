@@ -20,133 +20,129 @@
 package org.apache.freemarker.test.templateutil;
 
 import java.io.IOException;
-import java.util.Map;
+import java.io.Writer;
 import java.util.regex.Pattern;
 
+import org.apache.freemarker.core.CallPlace;
 import org.apache.freemarker.core.Environment;
 import org.apache.freemarker.core.TemplateException;
-import org.apache.freemarker.core.model.TemplateDirectiveBody;
+import org.apache.freemarker.core.model.ArgumentArrayLayout;
 import org.apache.freemarker.core.model.TemplateDirectiveModel;
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateModelException;
-import org.apache.freemarker.core.model.TemplateNumberModel;
-import org.apache.freemarker.core.model.TemplateScalarModel;
+import org.apache.freemarker.core.util.CallableUtils;
+import org.apache.freemarker.core.util.StringToIndexMap;
 import org.apache.freemarker.core.util._NullWriter;
-import org.apache.freemarker.core.util._StringUtil;
+import org.apache.freemarker.core.util._StringUtils;
 
 public class AssertFailsDirective implements TemplateDirectiveModel {
-    
+
     public static AssertFailsDirective INSTANCE = new AssertFailsDirective();
 
-    private static final String MESSAGE_PARAM = "message";
-    private static final String MESSAGE_REGEXP_PARAM = "messageRegexp";
-    private static final String EXCEPTION_PARAM = "exception";
-    private static final String CAUSE_NESTING_LEVEL_PARAM = "causeNestingLevel";
-    
-    private AssertFailsDirective() { }
+    private static final int MESSAGE_ARG_IDX = 0;
+    private static final int MESSAGE_REGEXP_ARG_IDX = 1;
+    private static final int EXCEPTION_ARG_IDX = 2;
+    private static final int CAUSE_NESTING_LEVEL_ARG_IDX = 3;
 
-    @Override
-    public void execute(Environment env, Map params, TemplateModel[] loopVars, TemplateDirectiveBody body)
+    private static final ArgumentArrayLayout ARGS_LAYOUT = ArgumentArrayLayout.create(
+            0,
+            false,
+            StringToIndexMap.of(
+                    "message", MESSAGE_ARG_IDX,
+                    "messageRegexp", MESSAGE_REGEXP_ARG_IDX,
+                    "exception", EXCEPTION_ARG_IDX,
+                    "causeNestingLevel", CAUSE_NESTING_LEVEL_ARG_IDX),
+            false);
+
+    private AssertFailsDirective() {
+    }
+
+    public void execute(TemplateModel[] args, CallPlace callPlace, Writer out, Environment env)
             throws TemplateException, IOException {
-        String message = null;
-        Pattern messageRegexp = null;
-        String exception = null;
-        int causeNestingLevel = 0;
-        for (Object paramEnt  : params.entrySet()) {
-            Map.Entry<String, TemplateModel> param = (Map.Entry) paramEnt;
-            String paramName = param.getKey();
-            if (paramName.equals(MESSAGE_PARAM)) {
-                message = getAsString(param.getValue(), MESSAGE_PARAM, env);
-            } else if (paramName.equals(MESSAGE_REGEXP_PARAM)) {
-                messageRegexp = Pattern.compile(
-                        getAsString(param.getValue(), MESSAGE_REGEXP_PARAM, env),
-                        Pattern.CASE_INSENSITIVE);
-            } else if (paramName.equals(EXCEPTION_PARAM)) {
-                exception = getAsString(param.getValue(), EXCEPTION_PARAM, env);
-            } else if (paramName.equals(CAUSE_NESTING_LEVEL_PARAM)) {
-                causeNestingLevel = getAsInt(param.getValue(), CAUSE_NESTING_LEVEL_PARAM, env);
-            } else {
-                throw new UnsupportedParameterException(paramName, env);
-            }
+        String message = CallableUtils.getOptionalStringArgument(args, MESSAGE_ARG_IDX, this);
+        Pattern messageRegexp;
+        {
+            String s = CallableUtils.getOptionalStringArgument(args, MESSAGE_REGEXP_ARG_IDX, this);
+            messageRegexp = s != null ? Pattern.compile(s, Pattern.CASE_INSENSITIVE) : null;
         }
-        
-        if (body != null) {
-            boolean blockFailed;
-            try {
-                body.render(_NullWriter.INSTANCE);
-                blockFailed = false;
-            } catch (Throwable e) {
-                blockFailed = true;
-                
-                int causeNestingLevelCountDown = causeNestingLevel; 
-                while (causeNestingLevelCountDown != 0) {
-                    e = e.getCause();
-                    if (e == null) {
-                        throw new AssertationFailedInTemplateException(
-                                "Failure is not like expected: The cause exception nesting dept was lower than "
-                                + causeNestingLevel + ".",
-                                env);
-                    }
-                    causeNestingLevelCountDown--;
-                }
-                
-                if (message != null || messageRegexp != null) {
-                    if (e.getMessage() == null) {
-                        throw new AssertationFailedInTemplateException(
-                                "Failure is not like expected. The exception message was null, "
-                                + "and thus it doesn't contain:\n" + _StringUtil.jQuote(message) + ".",
-                                env);
-                    }
-                    if (message != null) {
-                        String actualMessage = e instanceof TemplateException
-                                ? ((TemplateException) e).getMessageWithoutStackTop() : e.getMessage();
-                        if (actualMessage.toLowerCase().indexOf(message.toLowerCase()) == -1) {
-                            throw new AssertationFailedInTemplateException(
-                                    "Failure is not like expected. The exception message:\n" + _StringUtil.jQuote(actualMessage)
-                                    + "\ndoesn't contain:\n" + _StringUtil.jQuote(message) + ".",
-                                    env);
-                        }
-                    }
-                    if (messageRegexp != null) {
-                        if (!messageRegexp.matcher(e.getMessage()).find()) {
-                            throw new AssertationFailedInTemplateException(
-                                    "Failure is not like expected. The exception message:\n" + _StringUtil.jQuote(e.getMessage())
-                                    + "\ndoesn't match this regexp:\n" + _StringUtil.jQuote(messageRegexp.toString())
-                                    + ".",
-                                    env);
-                        }
-                    }
-                }
-                if (exception != null && e.getClass().getName().indexOf(exception) == -1) {
-                    throw new AssertationFailedInTemplateException(
-                            "Failure is not like expected. The exception class name " + _StringUtil.jQuote(e.getClass().getName())
-                            + " doesn't contain " + _StringUtil.jQuote(message) + ".",
+        String exception = CallableUtils.getOptionalStringArgument(args, EXCEPTION_ARG_IDX, this);
+        int causeNestingLevel = CallableUtils.getOptionalIntArgument(
+                args, CAUSE_NESTING_LEVEL_ARG_IDX, 0, this);
+
+        if (!callPlace.hasNestedContent()) {
+            throw CallableUtils.newGenericExecuteException(
+                    "It doesn't make sense to call this directive without nested content.", this);
+        }
+
+        boolean blockFailed;
+        try {
+            callPlace.executeNestedContent(null, _NullWriter.INSTANCE, env);
+            blockFailed = false;
+        } catch (Throwable e) {
+            blockFailed = true;
+
+            int causeNestingLevelCountDown = causeNestingLevel;
+            while (causeNestingLevelCountDown != 0) {
+                e = e.getCause();
+                if (e == null) {
+                    throw new AssertionFailedInTemplateException(
+                            "Failure is not like expected: The cause exception nesting dept was lower than "
+                                    + causeNestingLevel + ".",
                             env);
                 }
+                causeNestingLevelCountDown--;
             }
-            if (!blockFailed) {
-                throw new AssertationFailedInTemplateException(
-                        "Block was expected to fail, but it didn't.",
+
+            if (message != null || messageRegexp != null) {
+                if (e.getMessage() == null) {
+                    throw new AssertionFailedInTemplateException(
+                            "Failure is not like expected. The exception message was null, "
+                                    + "and thus it doesn't contain:\n" + _StringUtils.jQuote(message) + ".",
+                            env);
+                }
+                if (message != null) {
+                    String actualMessage = e instanceof TemplateException
+                            ? ((TemplateException) e).getMessageWithoutStackTop() : e.getMessage();
+                    if (!actualMessage.toLowerCase().contains(message.toLowerCase())) {
+                        throw new AssertionFailedInTemplateException(
+                                "Failure is not like expected. The exception message:\n"
+                                        + _StringUtils.jQuote(actualMessage)
+                                        + "\ndoesn't contain:\n" + _StringUtils.jQuote(message) + ".",
+                                env);
+                    }
+                }
+                if (messageRegexp != null) {
+                    if (!messageRegexp.matcher(e.getMessage()).find()) {
+                        throw new AssertionFailedInTemplateException(
+                                "Failure is not like expected. The exception message:\n"
+                                        + _StringUtils.jQuote(e.getMessage())
+                                        + "\ndoesn't match this regexp:\n"
+                                        + _StringUtils.jQuote(messageRegexp.toString())
+                                        + ".",
+                                env);
+                    }
+                }
+            }
+            if (exception != null && !e.getClass().getName().contains(exception)) {
+                throw new AssertionFailedInTemplateException(
+                        "Failure is not like expected. The exception class name "
+                                + _StringUtils.jQuote(e.getClass().getName())
+                                + " doesn't contain " + _StringUtils.jQuote(message) + ".",
                         env);
             }
         }
-    }
-
-    private String getAsString(TemplateModel value, String paramName, Environment env)
-            throws BadParameterTypeException, TemplateModelException {
-        if (value instanceof TemplateScalarModel) {
-            return ((TemplateScalarModel) value).getAsString(); 
-        } else {
-            throw new BadParameterTypeException(paramName, "string", value, env);
+        if (!blockFailed) {
+            throw new AssertionFailedInTemplateException("Block was expected to fail, but it didn't.", env);
         }
     }
 
-    private int getAsInt(TemplateModel value, String paramName, Environment env) throws BadParameterTypeException, TemplateModelException {
-        if (value instanceof TemplateNumberModel) {
-            return ((TemplateNumberModel) value).getAsNumber().intValue(); 
-        } else {
-            throw new BadParameterTypeException(paramName, "number", value, env);
-        }
+    @Override
+    public ArgumentArrayLayout getDirectiveArgumentArrayLayout() {
+        return ARGS_LAYOUT;
     }
-    
+
+    @Override
+    public boolean isNestedContentSupported() {
+        return true;
+    }
+
 }

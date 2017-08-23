@@ -21,14 +21,13 @@ package org.apache.freemarker.core.model.impl;
 
 import static org.junit.Assert.*;
 
-import java.util.ArrayList;
-
 import org.apache.freemarker.core.Configuration;
+import org.apache.freemarker.core.NonTemplateCallPlace;
+import org.apache.freemarker.core.TemplateException;
 import org.apache.freemarker.core.model.TemplateHashModel;
-import org.apache.freemarker.core.model.TemplateMethodModelEx;
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateModelException;
-import org.apache.freemarker.core.model.TemplateScalarModel;
+import org.apache.freemarker.core.model.TemplateStringModel;
+import org.apache.freemarker.core.util.CallableUtils;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -50,16 +49,18 @@ public class EnumModelsTest {
         try {
             enums.get("no.such.ClassExists");
             fail();
-        } catch (TemplateModelException ex) {
+        } catch (TemplateException ex) {
             assertTrue(ex.getCause() instanceof ClassNotFoundException);
         }
         
         TemplateModel a = e.get("A");
-        assertTrue(a instanceof TemplateScalarModel);
+        assertTrue(a instanceof TemplateStringModel);
         assertTrue(a instanceof TemplateHashModel);
-        assertEquals(((TemplateScalarModel) a).getAsString(), "ts:A");
-        TemplateMethodModelEx nameMethod = (TemplateMethodModelEx) ((TemplateHashModel) a).get("name");
-        assertEquals(((TemplateScalarModel) nameMethod.exec(new ArrayList())).getAsString(), "A");
+        assertEquals(((TemplateStringModel) a).getAsString(), "ts:A");
+        JavaMethodModel nameMethod = (JavaMethodModel) ((TemplateHashModel) a).get("name");
+        assertEquals(((TemplateStringModel) nameMethod.execute(
+                CallableUtils.EMPTY_TEMPLATE_MODEL_ARRAY, NonTemplateCallPlace.INSTANCE)).getAsString(),
+                "A");
         
         assertSame(e, enums.get(E.class.getName()));
         

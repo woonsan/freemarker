@@ -26,11 +26,10 @@ import java.util.Set;
 import org.apache.freemarker.core.model.TemplateDateModel;
 import org.apache.freemarker.core.model.TemplateHashModel;
 import org.apache.freemarker.core.model.TemplateModel;
-import org.apache.freemarker.core.model.TemplateModelException;
 import org.apache.freemarker.core.model.impl.SimpleDate;
-import org.apache.freemarker.core.model.impl.SimpleScalar;
+import org.apache.freemarker.core.model.impl.SimpleString;
 import org.apache.freemarker.core.util._SortedArraySet;
-import org.apache.freemarker.core.util._StringUtil;
+import org.apache.freemarker.core.util._StringUtils;
 
 /**
  * AST expression node: {@code .name}
@@ -94,12 +93,12 @@ final class ASTExpBuiltInVariable extends ASTExpression {
         if (!BUILT_IN_VARIABLE_NAMES.contains(name)) {
             StringBuilder sb = new StringBuilder();
             sb.append("Unknown special variable name: ");
-            sb.append(_StringUtil.jQuote(name)).append(".");
+            sb.append(_StringUtils.jQuote(name)).append(".");
 
             String correctedName;
             if (name.indexOf('_') != -1) {
-                sb.append(MessageUtil.FM3_SNAKE_CASE);
-                correctedName = _StringUtil.snakeCaseToCamelCase(name);
+                sb.append(MessageUtils.FM3_SNAKE_CASE);
+                correctedName = _StringUtils.snakeCaseToCamelCase(name);
                 if (!BUILT_IN_VARIABLE_NAMES.contains(correctedName)) {
                     correctedName = null;
                 }
@@ -145,7 +144,7 @@ final class ASTExpBuiltInVariable extends ASTExpression {
             return env.getGlobalVariables();
         }
         if (name == LOCALS) {
-            ASTDirMacro.Context ctx = env.getCurrentMacroContext();
+            ASTDirMacroOrFunction.Context ctx = env.getCurrentMacroContext();
             return ctx == null ? null : ctx.getLocals();
         }
         if (name == DATA_MODEL) {
@@ -155,48 +154,48 @@ final class ASTExpBuiltInVariable extends ASTExpression {
             return new VarsHash(env);
         }
         if (name == LOCALE) {
-            return new SimpleScalar(env.getLocale().toString());
+            return new SimpleString(env.getLocale().toString());
         }
         if (name == LOCALE_OBJECT) {
             return env.getObjectWrapper().wrap(env.getLocale());
         }
         if (name == LANG) {
-            return new SimpleScalar(env.getLocale().getLanguage());
+            return new SimpleString(env.getLocale().getLanguage());
         }
         if (name == NODE) {
             return env.getCurrentVisitorNode();
         }
         if (name == MAIN_TEMPLATE_NAME) {
-            return SimpleScalar.newInstanceOrNull(env.getMainTemplate().getLookupName());
+            return SimpleString.newInstanceOrNull(env.getMainTemplate().getLookupName());
         }
         if (name == CURRENT_TEMPLATE_NAME) {
-            return SimpleScalar.newInstanceOrNull(env.getCurrentTemplate().getLookupName());
+            return SimpleString.newInstanceOrNull(env.getCurrentTemplate().getLookupName());
         }
         if (name == PASS) {
-            return ASTDirMacro.DO_NOTHING_MACRO;
+            return ASTDirMacroOrFunction.PASS_MACRO;
         }
         if (name == OUTPUT_ENCODING) {
             Charset encoding = env.getOutputEncoding();
-            return encoding != null ? new SimpleScalar(encoding.name()) : null;
+            return encoding != null ? new SimpleString(encoding.name()) : null;
         }
         if (name == URL_ESCAPING_CHARSET) {
             Charset charset = env.getURLEscapingCharset();
-            return charset != null ? new SimpleScalar(charset.name()) : null;
+            return charset != null ? new SimpleString(charset.name()) : null;
         }
         if (name == ERROR) {
-            return new SimpleScalar(env.getCurrentRecoveredErrorMessage());
+            return new SimpleString(env.getCurrentRecoveredErrorMessage());
         }
         if (name == NOW) {
             return new SimpleDate(new Date(), TemplateDateModel.DATE_TIME);
         }
         if (name == VERSION) {
-            return new SimpleScalar(Configuration.getVersion().toString());
+            return new SimpleString(Configuration.getVersion().toString());
         }
         if (name == INCOMPATIBLE_IMPROVEMENTS) {
-            return new SimpleScalar(env.getConfiguration().getIncompatibleImprovements().toString());
+            return new SimpleString(env.getConfiguration().getIncompatibleImprovements().toString());
         }
         
-        throw new _MiscTemplateException(this,
+        throw new TemplateException(this,
                 "Invalid special variable: ", name);
     }
 
@@ -235,7 +234,7 @@ final class ASTExpBuiltInVariable extends ASTExpression {
         }
         
         @Override
-        public TemplateModel get(String key) throws TemplateModelException {
+        public TemplateModel get(String key) throws TemplateException {
             return env.getVariable(key);
         }
         

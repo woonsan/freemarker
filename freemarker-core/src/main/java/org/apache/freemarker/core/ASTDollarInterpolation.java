@@ -25,7 +25,7 @@ import java.io.Writer;
 import org.apache.freemarker.core.model.TemplateMarkupOutputModel;
 import org.apache.freemarker.core.outputformat.MarkupOutputFormat;
 import org.apache.freemarker.core.outputformat.OutputFormat;
-import org.apache.freemarker.core.util.FTLUtil;
+import org.apache.freemarker.core.util.TemplateLanguageUtils;
 
 /**
  * AST interpolation node: <tt>${exp}</tt>
@@ -76,7 +76,7 @@ final class ASTDollarInterpolation extends ASTInterpolation {
                 // ATTENTION: Keep this logic in sync. ?esc/?noEsc's logic!
                 srcPlainText = moOF.getSourcePlainText(mo);
                 if (srcPlainText == null) {
-                    throw new _TemplateModelException(escapedExpression,
+                    throw new TemplateException(escapedExpression,
                             "The value to print is in ", new _DelayedToString(moOF),
                             " format, which differs from the current output format, ",
                             new _DelayedToString(outputFormat), ". Format conversion wasn't possible.");
@@ -95,7 +95,7 @@ final class ASTDollarInterpolation extends ASTInterpolation {
 
     @Override
     protected Object calculateInterpolatedStringOrMarkup(Environment env) throws TemplateException {
-        return _EvalUtil.coerceModelToStringOrMarkup(escapedExpression.eval(env), escapedExpression, null, env);
+        return _EvalUtils.coerceModelToStringOrMarkup(escapedExpression.eval(env), escapedExpression, null, env);
     }
 
     @Override
@@ -103,7 +103,7 @@ final class ASTDollarInterpolation extends ASTInterpolation {
         StringBuilder sb = new StringBuilder();
         sb.append("${");
         final String exprCF = expression.getCanonicalForm();
-        sb.append(inStringLiteral ? FTLUtil.escapeStringLiteralPart(exprCF, '"') : exprCF);
+        sb.append(inStringLiteral ? TemplateLanguageUtils.escapeStringLiteralPart(exprCF, '"') : exprCF);
         sb.append("}");
         if (!canonical && expression != escapedExpression) {
             sb.append(" auto-escaped");            
